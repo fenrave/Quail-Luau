@@ -6,7 +6,7 @@ local OS = zune.time
 local RGEN = zune.random.new()
 ----------------------------------------------------
 export type ThreadPool = {
-	InitNewList: (self: ThreadPool) -> ThreadType,
+	InitNewList: (self: ThreadPool, ThreadAmount: number) -> ThreadType,
 	AddThread: (self: ThreadPool, pThread: ThreadProcessDef) -> (),
 	RemoveThread: (self: ThreadPool, Name: string) -> (),
 
@@ -35,6 +35,8 @@ type BufferPool = {
 
 type ThreadType = {
 	Thread: Thread,
+	ThreadPool: {Thread},
+	CurrentThread: number,
 
 	AssignJob: <M>(
 		self: ThreadType,
@@ -46,6 +48,8 @@ type ThreadType = {
 		ID: number, 
 		fn: (...any) -> ()
 	) -> (),
+	NextThread: (self: ThreadType) -> Thread,
+
 	Threads: ThreadInterface
 }
 
@@ -112,70 +116,91 @@ function JobHandle:Disable()
 	self.Handle.State = 1
 end
 ----------------------------------------------------
-local CoroutineList: {thread} = {}
+local CoroutineList: {()->()} = {}
 
 local function GlobalScheduler(): ()
 	while CoroutineList do
 		for _, Routine in CoroutineList do
-			Task.defer(Routine)
+			Task.spawn(Routine)
 		end
 
-		Task.wait()
+		Task.wait(.001)
 	end
-end; Task.spawn(GlobalScheduler)
+end
+Task.defer(GlobalScheduler)
 ----------------------------------------------------
-function ThreadPool:InitNewList()
+function ThreadPool:InitNewList(ThreadAmount: number)
 	local NewList = {
-		Thread = Thread.fromModule("./thread_Interface"),
-		Threads = {}
-	} :: ThreadType ; NewList.Thread:start()
+		Thread = nil :: any,
+		ThreadPool = {},
+		Threads = {},
+		CurrentThread = 1
+	} :: ThreadType
+
+	for i = 1, ThreadAmount or 5 do
+		local NewThread = Thread.fromModule("./thread_Interface")
+
+		table.insert(
+			NewList.ThreadPool,
+			NewThread
+		); NewThread:start()
+
+	end; NewList.Thread = NewList.ThreadPool[1]
 
 	local function InternalScheduler(): ()
 		local self: ThreadType = NewList
 		local JobCount: number = 0
+		local Thread: Thread = self:NextThread()
 
-		while NewList do coroutine.yield();
-
-			for _, Module in self.Threads do
-				for Index, Job in Module.Jobs do
-					if Job.State == 2 or Job.RequestAmount == 0 then
-						Module.Jobs[Index] = nil
-						continue
-					elseif Job.State == 1 then
-						continue
-					end
-
-					Job.RequestAmount = if Job.RequestAmount > 0 then
-											Job.RequestAmount - 1
-										else
-											-1
-
-					JobCount += 1 ; self.Thread:send(Job)
+		for _, Module in self.Threads do
+			for Index, Job in Module.Jobs do
+				if Job.State == 2 or Job.RequestAmount == 0 then
+					Module.Jobs[Index] = nil
+					continue
+				elseif Job.State == 1 then
+					continue
 				end
+
+				Job.RequestAmount = if Job.RequestAmount > 0 then
+										Job.RequestAmount - 1 
+									else 
+										-1
+
+				JobCount += 1
+				Thread:send(Job)
 			end
-
-			if JobCount > 0 then
-				repeat JobCount -= 1
-					--yields on receive
-					local Received: ThreadPacket<CompletedPacket> = self.Thread:receive()
-					if Received == nil then
-						print("I don't know what happened")
-						continue
-					end
-					local Callback = self.Threads[Received.Name].Callbacks[Received.ID]
-
-					if Callback then
-						Callback(Received.Data)
-					else
-						print(`Unemployed Data on... Module: {Received.Name}, ID: {Received.ID}`)
-					end
-				until JobCount <= 0
-			end
-
 		end
-	end; table.insert(CoroutineList, coroutine.create(InternalScheduler))
 
-	
+		if JobCount > 0 then
+			repeat
+				JobCount -= 1
+				--yields on receive
+				local Received: ThreadPacket<CompletedPacket> = Thread:receive()
+
+				local Callback = self.Threads[Received.Name].Callbacks[Received.ID]
+
+				if Callback then
+					Callback(Received.Data)
+				else
+					print(`Unemployed Data on... Module: {Received.Name}, ID: {Received.ID}`)
+				end
+			until JobCount <= 0
+		end
+			
+	end
+table.insert(CoroutineList, InternalScheduler)
+
+	function NewList:NextThread(): Thread
+		local NextIndex = self.CurrentThread + 1
+		local NextThread: Thread = self.ThreadPool[NextIndex]
+		
+		if not NextThread then
+			NextThread = self.ThreadPool[1]
+			NextIndex = 1
+		end; self.CurrentThread = NextIndex
+
+		return NextThread
+	end
 
 	function NewList:OnComplete(ModuleName: string, ID: number, fn: () -> ()): ()
 		self.Threads[ModuleName].Callbacks[ID] = fn
@@ -211,24 +236,26 @@ end
 function ThreadPool:AddThread(pThread: ThreadProcessDef): ()
 
 	local CurrentThread = pThread.Thread
-	for Name, Module in pThread.Modules do
-		local NewPacket: ThreadPacket<ModulePacket> = {
-			Name = Name,
-			ID = RGEN:nextInteger(0,9999999999999),
-			RequestType = RequestEnum[1],
-			RequestAmount = 0,
-			Data = {
-				Path = Module
-			},
-			State = 0
-		}
+	for i, Thread in CurrentThread.ThreadPool do
+		for Name, Module in pThread.Modules do
+			local NewPacket: ThreadPacket<ModulePacket> = {
+				Name = Name,
+				ID = RGEN:nextInteger(0,9999999999999),
+				RequestType = RequestEnum[1],
+				RequestAmount = 0,
+				Data = {
+					Path = Module
+				},
+				State = 0
+			}
 	
-		CurrentThread.Threads[Name] = {
-			Jobs = {},
-			Callbacks = {}
-		}
+			CurrentThread.Threads[Name] = {
+				Jobs = {},
+				Callbacks = {}
+			}
 
-		CurrentThread.Thread:send(NewPacket)
+			Thread:send(NewPacket)
+		end
 	end
 
 end
