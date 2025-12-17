@@ -124,7 +124,7 @@ local function GlobalScheduler(): ()
 			Task.spawn(Routine)
 		end
 
-		Task.wait(.001)
+		Task.wait(Timer)
 	end
 end
 Task.defer(GlobalScheduler)
