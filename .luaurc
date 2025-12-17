@@ -1,0 +1,11 @@
+{
+    "languageMode": "strict",
+    "lint": {
+        "LocalUnused": false,
+        "ImportUnused": false,
+        "SameLineStatement": true,
+        "BuiltinGlobalWrite": false,
+        "TableOperations": true
+    },
+    "aliases": {}
+}
