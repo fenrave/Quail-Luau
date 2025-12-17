@@ -121,7 +121,7 @@ local CoroutineList: {()->()} = {}
 local function GlobalScheduler(): ()
 	while CoroutineList do
 		for _, Routine in CoroutineList do
-			Task.spawn(Routine)
+			Routine()
 		end
 
 		Task.wait(Timer)
