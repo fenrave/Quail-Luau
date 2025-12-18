@@ -126,7 +126,7 @@ local function GlobalScheduler(): ()
 		Task.wait(Timer)
 	end
 end
-Task.defer(GlobalScheduler)
+Task.spawn(GlobalScheduler)
 ----------------------------------------------------
 function Nest:NewNest(EggAmount: number)
 	local NewList = {
@@ -145,6 +145,7 @@ function Nest:NewNest(EggAmount: number)
 		); NewEgg:start()
 
 	end; NewList.Egg = NewList.Nest[1]
+
 
 	local function InternalScheduler(): ()
 		local self: BurrowType = NewList
@@ -173,7 +174,7 @@ function Nest:NewNest(EggAmount: number)
 			repeat JobCount -= 1;
 				--yields on receive
 				local Received: EggPacket<CompletedPacket> = Egg:receive()
-
+				
 				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
 
 				if Callback then

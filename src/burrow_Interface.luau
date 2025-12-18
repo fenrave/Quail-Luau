@@ -15,7 +15,8 @@ type ModuleTable<Module> = {
 }
 
 type ModulePacket = {
-	Path: string
+	Path: string?,
+	Success: boolean
 }
 
 type DataPacket = {
@@ -25,23 +26,25 @@ type DataPacket = {
 local ModuleTable = {}
 
 local PacketCase = {
-	Module = function(Packet: ThreadPacket<ModulePacket>): boolean
+	Module = function(Packet: ThreadPacket<ModulePacket>)
 		local ReturnState: boolean = false
 		local ModulePath = Packet.Data.Path
-
+		
 		if not ModuleTable[Packet.Name] then
 			ModuleTable[Packet.Name] = {}
 		end
 
 		ModuleTable[Packet.Name][#ModuleTable[Packet.Name]] = require(ModulePath) :: any
 
-		return ReturnState
+		Packet.Data = {Success = ReturnState}
+		return Packet
 	end,
 
 	Send = function(Packet: ThreadPacket<DataPacket>)
 		local Modules = ModuleTable[Packet.Name]
+		Packet.Data = Modules[math.random(0, #Modules)](Packet.Data)
 
-		return Modules[math.random(0, #Modules)](Packet.Data)
+		return Packet
 	end
 }
 

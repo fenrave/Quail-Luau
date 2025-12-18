@@ -1,21 +1,5 @@
-![Quail Image](src/assets/quail.png)
+local Nest = require("./src/Quail")
 
-## **Quail-Luau**
-
-***WIP***
-
-The purpose of this project is to easily create ThreadPools via the Zune Runtime's Thread library.
-
-While multi-threading isn't necessarily the best solution for all problems, inspite of how some people seem to think, easily creating ThreadPool interfaces can quickly accelerate math heavy code, especially in an interpreted language context.
-
-Or alternatively, code that doesn't need to run on the main thread, or particularly often, can be offloaded to a secondary thread, so long as there's data to be processed.
-
-## Usage
-
-*Usage Example*
-
-```luau
-local Nest = require("@Nest") --Assuming aliased, if not, path directly
 
 local NewNest = Nest:NewNest(4) --Amount of threads in the pool
 
@@ -69,29 +53,3 @@ NewNest:OnComplete("Test", Quail.Handle.ID, function(Data)
         buffer.readf64(Data.T, 0)
     )
 end)
-```
-
-*"Why all these tables?"*
-
-All data is expected to be reused & set up once.
-
-You could build a definitions file for all of the data you're going to need, or make boilerplates you can `table.clone(def)` from.
-
-The idea here is to have everything running constantly and to creating
-
-*Minimal Receiving module side*
-
-```luau
-type Data = {
-    T: buffer
-}
-
-local function Test(Data: Data): Data
-    buffer.writef64(Data.T, 0, buffer.readf64(Data.T, 0) + 10)
-    
-    return Data
-end
-
-
-return Test
-```

@@ -1,9 +1,10 @@
+
 type Data = {
-    x: buffer
+    T: buffer
 }
 
 local function Test(Data: Data): Data
-    buffer.writef64(Data.x, 0, buffer.readf64(Data.x, 0) + 10)
+    buffer.writef64(Data.T, 0, buffer.readf64(Data.T, 0) + 10)
     
     return Data
 end
