@@ -1,4 +1,4 @@
-[Quail Image](/quail.png)
+[Quail Image](quail.png)
 
 ## **Quail-Luau**
 
