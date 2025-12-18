@@ -1,20 +1,20 @@
 --!strict
-local Thread = zune.thread
-local ThreadPool = {} :: ThreadPool
+local Egg = zune.thread
+local Nest = {} :: Nest
 local Task = zune.task
 local OS = zune.time
 local RGEN = zune.random.new()
 ----------------------------------------------------
-export type ThreadPool = {
-	InitNewList: (self: ThreadPool, ThreadAmount: number) -> ThreadType,
-	AddThread: (self: ThreadPool, pThread: ThreadProcessDef) -> (),
-	RemoveThread: (self: ThreadPool, Name: string) -> (),
+export type Nest = {
+	InitNewList: (self: Nest, EggAmount: number) -> EggType,
+	AddEgg: (self: Nest, pEgg: EggProcessDef) -> (),
+	RemoveEgg: (self: Nest, Name: string) -> (),
 
-	ThreadList: ThreadList
+	EggList: EggList
 }
 
-export type ThreadProcessDef = {
-	Thread: ThreadType,
+export type EggProcessDef = {
+	Egg: EggType,
 
 	Modules: {
 		[string]: string
@@ -22,9 +22,9 @@ export type ThreadProcessDef = {
 }
 ----------------------------------------------------
 
-type ThreadInterface = {
+type EggInterface = {
 	[string]: {
-		Jobs: {[number]: ThreadPacket<any>},
+		Jobs: {[number]: EggPacket<any>},
 		Callbacks: {[number]: ()->()}
 	}
 }
@@ -33,31 +33,31 @@ type BufferPool = {
 	[number]: buffer
 }
 
-type ThreadType = {
-	Thread: Thread,
-	ThreadPool: {Thread},
-	CurrentThread: number,
+type EggType = {
+	Egg: Thread,
+	Nest: {Thread},
+	CurrentEgg: number,
 
 	AssignJob: <M>(
-		self: ThreadType,
+		self: EggType,
 		WorkDef: WorkDef<any>
-	) -> JobHandle,
+	) -> QuailHandle,
 	OnComplete: (
-		self: ThreadType,
+		self: EggType,
 		ModuleName: string, 
 		ID: number, 
 		fn: (...any) -> ()
 	) -> (),
-	NextThread: (self: ThreadType) -> Thread,
+	NextEgg: (self: EggType) -> Thread,
 
-	Threads: ThreadInterface
+	Eggs: EggInterface
 }
 
-type ThreadList = setmetatable<{
-	[number]: ThreadType
+type EggList = setmetatable<{
+	[number]: EggType
 }, {}> | {}
 
-type ThreadPacket<Assignable> = {
+type EggPacket<Assignable> = {
 	Name: string,
 	ID: number,
 	RequestType: string,
@@ -81,8 +81,8 @@ type ModulePacket = {
 	Path: string
 }
 ----------------------------------------------------
-local InternalList: ThreadList = {}
-ThreadPool.ThreadList = setmetatable({}, {
+local InternalList: EggList = {}
+Nest.EggList = setmetatable({}, {
 		__index = InternalList,
 		__newindex = InternalList
 	}
@@ -94,33 +94,33 @@ local RequestEnum: {string} = {
 	[3] = "Request"
 }
 ----------------------------------------------------
-export type JobHandle = {
-	Remove: (self: JobHandle) -> (),
-	Disable: (self: JobHandle) -> (),
-	RequestUpdate: (self: JobHandle) -> (),
+export type QuailHandle = {
+	Remove: (self: QuailHandle) -> (),
+	Disable: (self: QuailHandle) -> (),
+	RequestUpdate: (self: QuailHandle) -> (),
 
-	Handle: ThreadPacket<any>
+	Handle: EggPacket<any>
 }
 
 ----------------------------------------------------
-local JobHandle = {} :: JobHandle
+local QuailHandle = {} :: QuailHandle
 
 local Timer: number = 1/240
 
-function JobHandle:Remove()
+function QuailHandle:Remove()
 	self.Handle.State = 2
 	self = nil :: any
 end
 
-function JobHandle:Disable()
+function QuailHandle:Disable()
 	self.Handle.State = 1
 end
 ----------------------------------------------------
-local CoroutineList: {()->()} = {}
+local RoutineList: {()->()} = {}
 
 local function GlobalScheduler(): ()
-	while CoroutineList do
-		for _, Routine in CoroutineList do
+	while RoutineList do
+		for _, Routine in RoutineList do
 			Routine()
 		end
 
@@ -129,30 +129,30 @@ local function GlobalScheduler(): ()
 end
 Task.defer(GlobalScheduler)
 ----------------------------------------------------
-function ThreadPool:InitNewList(ThreadAmount: number)
+function Nest:InitNewList(EggAmount: number)
 	local NewList = {
-		Thread = nil :: any,
-		ThreadPool = {},
-		Threads = {},
-		CurrentThread = 1
-	} :: ThreadType
+		Egg = nil :: any,
+		Nest = {},
+		Eggs = {},
+		CurrentEgg = 1
+	} :: EggType
 
-	for i = 1, ThreadAmount or 5 do
-		local NewThread = Thread.fromModule("./thread_Interface")
+	for i: number = 1, EggAmount or 5 do
+		local NewEgg: Thread = Egg.fromModule("./burrow_Interface")
 
 		table.insert(
-			NewList.ThreadPool,
-			NewThread
-		); NewThread:start()
+			NewList.Nest,
+			NewEgg
+		); NewEgg:start()
 
-	end; NewList.Thread = NewList.ThreadPool[1]
+	end; NewList.Egg = NewList.Nest[1]
 
 	local function InternalScheduler(): ()
-		local self: ThreadType = NewList
+		local self: EggType = NewList
 		local JobCount: number = 0
-		local Thread: Thread = self:NextThread()
+		local Egg: Thread = self:NextEgg()
 
-		for _, Module in self.Threads do
+		for _, Module in self.Eggs do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 or Job.RequestAmount == 0 then
 					Module.Jobs[Index] = nil
@@ -166,18 +166,16 @@ function ThreadPool:InitNewList(ThreadAmount: number)
 									else 
 										-1
 
-				JobCount += 1
-				Thread:send(Job)
+				JobCount += 1 ; Egg:send(Job)
 			end
 		end
 
 		if JobCount > 0 then
-			repeat
-				JobCount -= 1
+			repeat JobCount -= 1;
 				--yields on receive
-				local Received: ThreadPacket<CompletedPacket> = Thread:receive()
+				local Received: EggPacket<CompletedPacket> = Egg:receive()
 
-				local Callback = self.Threads[Received.Name].Callbacks[Received.ID]
+				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
 
 				if Callback then
 					Callback(Received.Data)
@@ -187,28 +185,28 @@ function ThreadPool:InitNewList(ThreadAmount: number)
 			until JobCount <= 0
 		end
 			
-	end
-table.insert(CoroutineList, InternalScheduler)
+	end ; table.insert(RoutineList, InternalScheduler)
 
-	function NewList:NextThread(): Thread
-		local NextIndex = self.CurrentThread + 1
-		local NextThread: Thread = self.ThreadPool[NextIndex]
+	function NewList:NextEgg(): Thread
+		local NextIndex = self.CurrentEgg + 1
+		local NextEgg: Thread = self.Nest[NextIndex]
 		
-		if not NextThread then
-			NextThread = self.ThreadPool[1]
+		if not NextEgg then
+			NextEgg = self.Nest[1]
 			NextIndex = 1
-		end; self.CurrentThread = NextIndex
+		end; self.CurrentEgg = NextIndex
 
-		return NextThread
+		self.Egg = NextEgg
+		return NextEgg
 	end
 
 	function NewList:OnComplete(ModuleName: string, ID: number, fn: () -> ()): ()
-		self.Threads[ModuleName].Callbacks[ID] = fn
+		self.Eggs[ModuleName].Callbacks[ID] = fn
 	end
 
-	function NewList:AssignJob<M>(WorkDef: WorkDef<any>): JobHandle
+	function NewList:AssignJob<M>(WorkDef: WorkDef<any>): QuailHandle
 		
-		local NewPacket: ThreadPacket<typeof(WorkDef.Data)> = {
+		local NewPacket: EggPacket<typeof(WorkDef.Data)> = {
 			Name = WorkDef.ModuleName,
 			ID = RGEN:nextInteger(0,9999999999999),
 			RequestType = if type(WorkDef.Type) ~= "string" then
@@ -220,9 +218,9 @@ table.insert(CoroutineList, InternalScheduler)
 			State = 0
 		}
 
-		NewList.Threads[WorkDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
+		NewList.Eggs[WorkDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
 
-		local NewHandle = table.clone(JobHandle)
+		local NewHandle = table.clone(QuailHandle)
 		NewHandle.Handle = NewPacket
 
 		return NewHandle
@@ -233,12 +231,12 @@ table.insert(CoroutineList, InternalScheduler)
 	return NewList
 end
 
-function ThreadPool:AddThread(pThread: ThreadProcessDef): ()
+function Nest:AddEgg(pEgg: EggProcessDef): ()
 
-	local CurrentThread = pThread.Thread
-	for i, Thread in CurrentThread.ThreadPool do
-		for Name, Module in pThread.Modules do
-			local NewPacket: ThreadPacket<ModulePacket> = {
+	local CurrentEgg = pEgg.Egg
+	for i, Egg in CurrentEgg.Nest do
+		for Name, Module in pEgg.Modules do
+			local NewPacket: EggPacket<ModulePacket> = {
 				Name = Name,
 				ID = RGEN:nextInteger(0,9999999999999),
 				RequestType = RequestEnum[1],
@@ -249,31 +247,31 @@ function ThreadPool:AddThread(pThread: ThreadProcessDef): ()
 				State = 0
 			}
 	
-			CurrentThread.Threads[Name] = {
+			CurrentEgg.Eggs[Name] = {
 				Jobs = {},
 				Callbacks = {}
 			}
 
-			Thread:send(NewPacket)
+			Egg:send(NewPacket)
 		end
 	end
 
 end
 
-function ThreadPool:RemoveThread()
+function Nest:RemoveEgg()
 end
 
 
-    local Thread = ThreadPool:InitNewList(10)
+    local Thread = Nest:InitNewList(10)
 
 
-    local threaddef: ThreadProcessDef = {
-        Thread = Thread,
+    local threaddef: EggProcessDef = {
+        Egg = Thread,
         Modules = {["Test"] = "./modules/test"}
         
     }
 
-    ThreadPool:AddThread(threaddef)
+    Nest:AddEgg(threaddef)
 
 	local NewBuffer = buffer.create(10)
 	buffer.writef64(NewBuffer, 0, 10)
@@ -298,4 +296,4 @@ end
     end)
 
 
-return ThreadPool
+return Nest
