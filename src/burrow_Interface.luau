@@ -1,5 +1,4 @@
 local m = zune.thread
-local fs = zune.fs
 local task = zune.task
 
 type ThreadPacket<Assignable> = {

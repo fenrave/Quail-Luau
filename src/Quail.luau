@@ -2,7 +2,6 @@
 local Egg = zune.thread
 local Nest = {} :: Nest
 local Task = zune.task
-local OS = zune.time
 local RGEN = zune.random.new()
 ----------------------------------------------------
 export type Nest = {
