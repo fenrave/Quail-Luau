@@ -6,15 +6,15 @@ local OS = zune.time
 local RGEN = zune.random.new()
 ----------------------------------------------------
 export type Nest = {
-	InitNewList: (self: Nest, EggAmount: number) -> EggType,
-	AddEgg: (self: Nest, pEgg: EggProcessDef) -> (),
+	NewNest: (self: Nest, EggAmount: number) -> BurrowType,
+	AddEgg: (self: Nest, pEgg: EggSetupDef) -> (),
 	RemoveEgg: (self: Nest, Name: string) -> (),
 
 	EggList: EggList
 }
 
-export type EggProcessDef = {
-	Egg: EggType,
+export type EggSetupDef = {
+	Nest: BurrowType,
 
 	Modules: {
 		[string]: string
@@ -33,28 +33,28 @@ type BufferPool = {
 	[number]: buffer
 }
 
-type EggType = {
+type BurrowType = {
 	Egg: Thread,
 	Nest: {Thread},
 	CurrentEgg: number,
 
 	AssignJob: <M>(
-		self: EggType,
-		WorkDef: WorkDef<any>
+		self: BurrowType,
+		EggDef: EggDef<any>
 	) -> QuailHandle,
 	OnComplete: (
-		self: EggType,
+		self: BurrowType,
 		ModuleName: string, 
 		ID: number, 
 		fn: (...any) -> ()
 	) -> (),
-	NextEgg: (self: EggType) -> Thread,
+	NextEgg: (self: BurrowType) -> Thread,
 
 	Eggs: EggInterface
 }
 
 type EggList = setmetatable<{
-	[number]: EggType
+	[number]: BurrowType
 }, {}> | {}
 
 type EggPacket<Assignable> = {
@@ -66,7 +66,7 @@ type EggPacket<Assignable> = {
 	State: number
 }
 
-export type WorkDef<Type> = {
+export type EggDef<Type> = {
 	ModuleName: string,
 	Limit: number,
 	Type: string,
@@ -129,13 +129,13 @@ local function GlobalScheduler(): ()
 end
 Task.defer(GlobalScheduler)
 ----------------------------------------------------
-function Nest:InitNewList(EggAmount: number)
+function Nest:NewNest(EggAmount: number)
 	local NewList = {
 		Egg = nil :: any,
 		Nest = {},
 		Eggs = {},
 		CurrentEgg = 1
-	} :: EggType
+	} :: BurrowType
 
 	for i: number = 1, EggAmount or 5 do
 		local NewEgg: Thread = Egg.fromModule("./burrow_Interface")
@@ -148,7 +148,7 @@ function Nest:InitNewList(EggAmount: number)
 	end; NewList.Egg = NewList.Nest[1]
 
 	local function InternalScheduler(): ()
-		local self: EggType = NewList
+		local self: BurrowType = NewList
 		local JobCount: number = 0
 		local Egg: Thread = self:NextEgg()
 
@@ -204,21 +204,21 @@ function Nest:InitNewList(EggAmount: number)
 		self.Eggs[ModuleName].Callbacks[ID] = fn
 	end
 
-	function NewList:AssignJob<M>(WorkDef: WorkDef<any>): QuailHandle
+	function NewList:AssignJob<M>(EggDef: EggDef<any>): QuailHandle
 		
-		local NewPacket: EggPacket<typeof(WorkDef.Data)> = {
-			Name = WorkDef.ModuleName,
+		local NewPacket: EggPacket<typeof(EggDef.Data)> = {
+			Name = EggDef.ModuleName,
 			ID = RGEN:nextInteger(0,9999999999999),
-			RequestType = if type(WorkDef.Type) ~= "string" then
-					RequestEnum[WorkDef.Type]
+			RequestType = if type(EggDef.Type) ~= "string" then
+					RequestEnum[EggDef.Type]
 				else
-					WorkDef.Type,
-			RequestAmount = WorkDef.Limit or -1,
-			Data = WorkDef.Data,
+					EggDef.Type,
+			RequestAmount = EggDef.Limit or -1,
+			Data = EggDef.Data,
 			State = 0
 		}
 
-		NewList.Eggs[WorkDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
+		NewList.Eggs[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
 
 		local NewHandle = table.clone(QuailHandle)
 		NewHandle.Handle = NewPacket
@@ -231,10 +231,10 @@ function Nest:InitNewList(EggAmount: number)
 	return NewList
 end
 
-function Nest:AddEgg(pEgg: EggProcessDef): ()
+function Nest:AddEgg(pEgg: EggSetupDef): ()
 
-	local CurrentEgg = pEgg.Egg
-	for i, Egg in CurrentEgg.Nest do
+	local CurrentNest = pEgg.Nest
+	for i, Egg in CurrentNest.Nest do
 		for Name, Module in pEgg.Modules do
 			local NewPacket: EggPacket<ModulePacket> = {
 				Name = Name,
@@ -247,7 +247,7 @@ function Nest:AddEgg(pEgg: EggProcessDef): ()
 				State = 0
 			}
 	
-			CurrentEgg.Eggs[Name] = {
+			CurrentNest.Eggs[Name] = {
 				Jobs = {},
 				Callbacks = {}
 			}
@@ -261,39 +261,6 @@ end
 function Nest:RemoveEgg()
 end
 
-
-    local Thread = Nest:InitNewList(10)
-
-
-    local threaddef: EggProcessDef = {
-        Egg = Thread,
-        Modules = {["Test"] = "./modules/test"}
-        
-    }
-
-    Nest:AddEgg(threaddef)
-
-	local NewBuffer = buffer.create(10)
-	buffer.writef64(NewBuffer, 0, 10)
-
-	local Def = {
-		ModuleName = "Test", 
-		Limit = -1, 
-		Type = "Send", 
-		Data = {x = NewBuffer}
-	}
-
-    local Handle = Thread:AssignJob(Def)
-	local Timer = os.clock()
-
-    Thread:OnComplete("Test", Handle.Handle.ID, function(output: {x: buffer})
-		buffer.writef64(NewBuffer, 0, buffer.readf64(NewBuffer, 0) + 10)
-		print(buffer.readf64(output.x, 0))
-		if buffer.readf64(output.x, 0) == 2000000 then
-			print(os.clock() - Timer)
-			zune.process.exit(0)
-		end
-    end)
 
 
 return Nest

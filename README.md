@@ -1,6 +1,8 @@
-[Quail Image](quail.png)
+![Quail Image](src/assets/quail.png)
 
 ## **Quail-Luau**
+
+***WIP***
 
 The purpose of this project is to easily create ThreadPools via the Zune Runtime's Thread library.
 
