@@ -48,7 +48,7 @@ local PacketCase = {
 local function PassResults(Packet: ThreadPacket<DataPacket>)
 	local Result = PacketCase[Packet.RequestType](Packet)
 
-	m.send(Packet)
+	m.send(Result)
 end
 
 local function Main()
