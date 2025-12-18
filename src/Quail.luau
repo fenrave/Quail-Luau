@@ -9,8 +9,11 @@ export type Nest = {
 	AddEgg: (self: Nest, pEgg: EggSetupDef) -> (),
 	RemoveEgg: (self: Nest, Name: string) -> (),
 
-	Scheduler: () -> (),
+	Scheduler: (self: Nest) -> (),
 	RoutineList: {() -> ()},
+	ToggleScheduler: (self: Nest) -> (),
+
+	NoInternalSchedule: boolean,
 
 	Timer: number,
 	EggList: EggList
@@ -124,9 +127,14 @@ end
 ----------------------------------------------------
 Nest.RoutineList = {}
 Nest.Timer = 1/240
+Nest.NoInternalSchedule = false
+
+function Nest:ToggleScheduler()
+	Nest.NoInternalSchedule = not Nest.NoInternalSchedule --Inverts state
+end
 
 function Nest:Scheduler(): ()
-	while self.RoutineList do
+	while not Nest.NoInternalSchedule do
 		for _, Routine in self.RoutineList do
 			Routine()
 		end

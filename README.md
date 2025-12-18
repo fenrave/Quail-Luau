@@ -79,8 +79,6 @@ You could build a definitions file for all of the data you're going to need, or 
 
 The idea here is to have everything running constantly. Data is updated in real time and it's up to you to handle how much you want it to update.
 
-Overriding the scheduler and tying it into your own is fairly easy.
-
 *Minimal Receiving module side*
 
 ```luau
@@ -97,3 +95,17 @@ end
 
 return Test
 ```
+## Scheduler
+
+Overriding the scheduler and tying it into your own is fairly easy.
+
+**Scheduler Timer**
+
+This is as simple as changing the `Nest.Timer` to something else.
+
+Zune allows task.wait() to run in terms of nanoseconds (0.0001~), so you're not tied to a specific frequency. Default is 240hz (1/240).
+
+
+**Replacing the Scheduler**
+
+You can either call `Nest:ToggleScheduler()` or toggle `Nest.NoInternalScheduler = true` manually. From there, you can then either replace the Nest:Scheduler() method, or iterate over the `Nest.RoutineList` and invoke the internal schedulers directly.
