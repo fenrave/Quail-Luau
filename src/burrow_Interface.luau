@@ -1,6 +1,6 @@
 local m = zune.thread
 local task = zune.task
-
+----------------------------------------------------
 type ThreadPacket<Assignable> = {
 	Name: string,
 	ID: number,
@@ -14,6 +14,33 @@ type ModuleTable<Module> = {
 	[string]: {Module}
 }
 
+type Field = {
+	[string]: {[any]: any}
+}
+
+type Bevy = setmetatable<{}, {
+	__index: Field,
+	__newindex: (List: {}, Index: any, Value: any) -> ()
+}>
+
+type FieldTypes = {
+	Fields: {
+		[string]: {[any]: any}
+	},
+
+	Bevies: {[string]: Bevy},
+
+	New: (self: FieldTypes, Name: string) -> Bevy,
+	GetBevy: (self: FieldTypes, Name: string) -> Bevy,
+	SyncBevy: (self: FieldTypes, 
+	Data: {
+			[string]: {
+				[any]: any
+			}
+		}
+	) -> ()
+}
+----------------------------------------------------
 type ModulePacket = {
 	Path: string?,
 	Success: boolean
@@ -22,7 +49,45 @@ type ModulePacket = {
 type DataPacket = {
 	any
 }
+----------------------------------------------------
+local Field = {
+	Fields = {}
+} :: FieldTypes 
 
+local BevyChanges = {
+	Fields = {}
+} :: FieldTypes
+
+function Field:New(Name)
+	self.Fields[Name] = {}
+
+	local NewBevy: Bevy = setmetatable(
+		{},
+		{
+			__index = self.Fields[Name],
+			__newindex = function(List: {}, Index: any, Value: any)
+				self.Fields[Index] = Value
+				BevyChanges.Fields[Index] = self.Fields[Index]
+			end
+		}
+	)
+
+	self.Bevies[Name] = NewBevy
+
+	return NewBevy
+end
+
+function Field:GetBevy(Name)
+	return self.Bevies[Name]
+end
+
+function Field:SyncBevy(Data)
+	for Index,Value in Data do
+		self.Fields[Index] = Value
+	end
+end
+
+----------------------------------------------------
 local ModuleTable = {}
 
 local PacketCase = {
