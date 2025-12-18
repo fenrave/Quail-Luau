@@ -1,4 +1,5 @@
-![Quail Image](src/assets/quail.png)
+
+<img src="src/assets/quail.png" width="256">
 
 ## **Quail-Luau**
 
