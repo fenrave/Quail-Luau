@@ -9,6 +9,10 @@ export type Nest = {
 	AddEgg: (self: Nest, pEgg: EggSetupDef) -> (),
 	RemoveEgg: (self: Nest, Name: string) -> (),
 
+	Scheduler: () -> (),
+	RoutineList: {() -> ()},
+
+	Timer: number,
 	EggList: EggList
 }
 
@@ -96,7 +100,7 @@ local RequestEnum: {string} = {
 export type QuailHandle = {
 	Remove: (self: QuailHandle) -> (),
 	Disable: (self: QuailHandle) -> (),
-	RequestUpdate: (self: QuailHandle) -> (),
+	Enable: (self: QuailHandle) -> (),
 
 	Handle: EggPacket<any>
 }
@@ -104,7 +108,6 @@ export type QuailHandle = {
 ----------------------------------------------------
 local QuailHandle = {} :: QuailHandle
 
-local Timer: number = 1/240
 
 function QuailHandle:Remove()
 	self.Handle.State = 2
@@ -114,19 +117,24 @@ end
 function QuailHandle:Disable()
 	self.Handle.State = 1
 end
-----------------------------------------------------
-local RoutineList: {()->()} = {}
 
-local function GlobalScheduler(): ()
-	while RoutineList do
-		for _, Routine in RoutineList do
+function QuailHandle:Enable()
+	self.Handle.State = 0
+end
+----------------------------------------------------
+Nest.RoutineList = {}
+Nest.Timer = 1/240
+
+function Nest:Scheduler(): ()
+	while self.RoutineList do
+		for _, Routine in self.RoutineList do
 			Routine()
 		end
 
-		Task.wait(Timer)
+		Task.wait(self.Timer)
 	end
 end
-Task.spawn(GlobalScheduler)
+Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
 function Nest:NewNest(EggAmount: number)
 	local NewList = {
@@ -174,18 +182,18 @@ function Nest:NewNest(EggAmount: number)
 			repeat JobCount -= 1;
 				--yields on receive
 				local Received: EggPacket<CompletedPacket> = Egg:receive()
-				
+
 				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
 
 				if Callback then
 					Callback(Received.Data)
 				else
-					print(`Unemployed Data on... Module: {Received.Name}, ID: {Received.ID}`)
+					print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
 				end
 			until JobCount <= 0
 		end
 			
-	end ; table.insert(RoutineList, InternalScheduler)
+	end ; table.insert(self.RoutineList, InternalScheduler)
 
 	function NewList:NextEgg(): Thread
 		local NextIndex = self.CurrentEgg + 1

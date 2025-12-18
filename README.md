@@ -77,7 +77,9 @@ All data is expected to be reused & set up once.
 
 You could build a definitions file for all of the data you're going to need, or make boilerplates you can `table.clone(def)` from.
 
-The idea here is to have everything running constantly and to creating
+The idea here is to have everything running constantly. Data is updated in real time and it's up to you to handle how much you want it to update.
+
+Overriding the scheduler and tying it into your own is fairly easy.
 
 *Minimal Receiving module side*
 
