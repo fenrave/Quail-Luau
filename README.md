@@ -3,7 +3,7 @@
 
 ## **Quail-Luau**
 
-***WIP***
+<sub>***WIP***<sub>
 
 The purpose of this project is to easily create ThreadPools via the Zune Runtime's Thread library.
 
@@ -12,6 +12,8 @@ While multi-threading isn't necessarily the best solution for all problems, insp
 Or alternatively, code that doesn't need to run on the main thread, or particularly often, can be offloaded to a secondary thread, so long as there's data to be processed.
 
 ## Usage
+
+<sub>A working version of this example is present in the repository.<sub>
 
 *Usage Example*
 
@@ -72,7 +74,7 @@ NewNest:OnComplete("Test", Quail.Handle.ID, function(Data)
 end)
 ```
 
-*"Why all these tables?"*
+<sub>*"Why all these tables?"*<sub>
 
 All data is expected to be reused & set up once.
 
