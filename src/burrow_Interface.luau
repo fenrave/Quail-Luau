@@ -24,21 +24,23 @@ type Bevy = setmetatable<{}, {
 }>
 
 type FieldTypes = {
-	Fields: {
-		[string]: {[any]: any}
-	},
+	Fields: Field,
 
 	Bevies: {[string]: Bevy},
 
 	New: (self: FieldTypes, Name: string) -> Bevy,
 	GetBevy: (self: FieldTypes, Name: string) -> Bevy,
-	SyncBevy: (self: FieldTypes, 
+	SyncBevy: (self: FieldTypes, Data: {
+		Data: Field,
+		Tracker: {[string]: {[any]: number}}
+	}) -> (), 
+	GetChanges: (self: FieldTypes) -> Field,
+
 	Data: {
 			[string]: {
 				[any]: any
 			}
-		}
-	) -> ()
+	}
 }
 ----------------------------------------------------
 type ModulePacket = {
@@ -49,18 +51,27 @@ type ModulePacket = {
 type DataPacket = {
 	any
 }
+
+type BevyData = {
+
+}
 ----------------------------------------------------
 local Field = {
 	Fields = {}
 } :: FieldTypes 
 
 local BevyChanges = {
-	Fields = {}
+	Fields = {},
 } :: FieldTypes
 
 function Field:New(Name)
-	self.Fields[Name] = {}
 
+	if self.Fields[Name] then
+		return self.Bevies[Name]
+	end
+
+	self.Fields[Name] = {}
+	
 	local NewBevy: Bevy = setmetatable(
 		{},
 		{
@@ -70,9 +81,7 @@ function Field:New(Name)
 				BevyChanges.Fields[Index] = self.Fields[Index]
 			end
 		}
-	)
-
-	self.Bevies[Name] = NewBevy
+	); self.Bevies[Name] = NewBevy
 
 	return NewBevy
 end
@@ -82,9 +91,20 @@ function Field:GetBevy(Name)
 end
 
 function Field:SyncBevy(Data)
-	for Index,Value in Data do
+	for Index, Value in Data.Data do
+		if not self.Fields[Index] then
+			self.Fields[Index] = {}
+		end
+
 		self.Fields[Index] = Value
 	end
+
+	BevyChanges.Fields = Data.Data
+	
+end
+
+function Field:GetChanges(Name)
+	return BevyChanges.Fields
 end
 
 ----------------------------------------------------
@@ -110,6 +130,10 @@ local PacketCase = {
 		Packet.Data = Modules[math.random(0, #Modules)](Packet.Data)
 
 		return Packet
+	end,
+
+	Sync = function()
+		
 	end
 }
 
