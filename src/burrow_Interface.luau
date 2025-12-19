@@ -138,14 +138,12 @@ local PacketCase = {
 }
 
 local function PassResults(Packet: ThreadPacket<DataPacket>)
-	local Result = PacketCase[Packet.RequestType](Packet)
-
-	m.send(Result)
+	-- print("resultdata", Result.Data)
+	m.send(PacketCase[Packet.RequestType](Packet))
 end
 
 local function Main()
 	while true do
-		local Packet: ThreadPacket<DataPacket> = m.receive()
-		task.spawn(PassResults, Packet)
+		task.spawn(PassResults, m.receive())
 	end
 end; Main()

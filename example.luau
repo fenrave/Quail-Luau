@@ -1,7 +1,7 @@
 local Nest = require("./src/Quail")
 
 
-local NewNest = Nest:NewNest(4) --Amount of threads in the pool
+local NewNest = Nest:NewNest(1) --Amount of threads in the pool
 
 local Eggs: Nest.EggSetupDef = {
     Nest = NewNest,
@@ -12,11 +12,11 @@ local Eggs: Nest.EggSetupDef = {
 
 Nest:AddEgg(Eggs)
 
-local NewBuffer: buffer = buffer.create(10)
+local num: number = 5
 
-buffer.writef64(NewBuffer, 0, 10)
 
-local Data = { T = NewBuffer }
+
+local Data = { T = num }
 
 local Def: Nest.EggDef<typeof(Data)> = {
     ModuleName = "Test",
@@ -43,13 +43,9 @@ local Quail = NewNest:AssignJob(Def)
 ]==]--
 
 --ModuleName, PacketID, Callback: (Data) -> ()
-NewNest:OnComplete("Test", Quail.Handle.ID, function(Data)
-    
-    print(buffer.readf64(Data.T, 0))
-
-    buffer.writef64(
-        NewBuffer, 
-        0, 
-        buffer.readf64(Data.T, 0)
-    )
+NewNest:OnComplete("Test", Quail.Handle.ID, function(ReturnData)
+    print("--------------")
+    -- print("returndata",ReturnData)
+    Quail.Handle.Data.T = ReturnData.T
+    -- print("quaildata", Quail.Handle.Data)
 end)

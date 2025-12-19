@@ -136,7 +136,7 @@ end
 function Nest:Scheduler(): ()
 	while not Nest.NoInternalSchedule do
 		for _, Routine in self.RoutineList do
-			Routine()
+			Task.defer(Routine)
 		end
 
 		Task.wait(self.Timer)
@@ -162,12 +162,10 @@ function Nest:NewNest(EggAmount: number)
 
 	end; NewList.Egg = NewList.Nest[1]
 
-
 	local function InternalScheduler(): ()
 		local self: BurrowType = NewList
 		local JobCount: number = 0
 		local Egg: Thread = self:NextEgg()
-
 		for _, Module in self.Eggs do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 or Job.RequestAmount == 0 then
@@ -176,7 +174,7 @@ function Nest:NewNest(EggAmount: number)
 				elseif Job.State == 1 then
 					continue
 				end
-
+				print("jobdata",Job.Data)
 				Job.RequestAmount = if Job.RequestAmount > 0 then
 										Job.RequestAmount - 1 
 									else 
@@ -190,7 +188,7 @@ function Nest:NewNest(EggAmount: number)
 			repeat JobCount -= 1;
 				--yields on receive
 				local Received: EggPacket<CompletedPacket> = Egg:receive()
-
+				print("receiveddata", Received.Data)
 				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
 
 				if Callback then
