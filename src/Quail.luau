@@ -136,7 +136,7 @@ end
 function Nest:Scheduler(): ()
 	while not Nest.NoInternalSchedule do
 		for _, Routine in self.RoutineList do
-			Task.defer(Routine)
+			Routine()
 		end
 
 		Task.wait(self.Timer)
@@ -179,7 +179,7 @@ function Nest:NewNest(EggAmount: number)
 										Job.RequestAmount - 1 
 									else 
 										-1
-
+					
 				JobCount += 1 ; Egg:send(Job)
 			end
 		end
