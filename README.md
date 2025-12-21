@@ -3,7 +3,7 @@
 
 ## **Quail-Luau**
 
-<sub>***WIP***<sub>
+<sub>***WIP, First Draft***<sub>
 
 The purpose of this project is to easily create ThreadPools via the Zune Runtime's Thread library.
 
