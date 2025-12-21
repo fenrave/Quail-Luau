@@ -11,7 +11,7 @@ local function Test(Data: Data, Bevy, Context: number): Data
     end
 
     NewBevy["Hello"] += 1
-    print(NewBevy["Hello"], `ThreadContext {Context}`)
+    
     Data.T += 10
     
     return Data

@@ -6,10 +6,8 @@ local RGEN = zune.random.new()
 ----------------------------------------------------
 export type Nest = {
 	NewNest: (self: Nest, EggAmount: number) -> BurrowType,
-	AddEgg: (self: Nest, pEgg: EggSetupDef) -> (),
-	RemoveEgg: (self: Nest, Name: string) -> (),
-
-	BevyList: {any},
+	AddModule: (self: Nest, pEgg: ModuleSetupDef) -> (),
+	RemoveModule: (self: Nest, Name: string) -> (),
 
 	Scheduler: (self: Nest) -> (),
 	RoutineList: {() -> ()},
@@ -21,7 +19,7 @@ export type Nest = {
 	EggList: EggList
 }
 
-export type EggSetupDef = {
+export type ModuleSetupDef = {
 	Nest: BurrowType,
 
 	Modules: {
@@ -29,27 +27,26 @@ export type EggSetupDef = {
 	}
 }
 ----------------------------------------------------
-
-type EggInterface = {
+type ClutchInterface = {
 	[string]: {
 		Jobs: {[number]: EggPacket<any>},
-		Callbacks: {[number]: ()->()}
+		Callbacks: {[number]: (...any)->()}
 	}
-}
-
-type BufferPool = {
-	[number]: buffer
 }
 
 type BurrowType = {
 	Egg: Thread,
 	Nest: {Thread},
 	CurrentEgg: number,
-	BevyList: {any},
+	BevyList: {
+		[string]: {
+			[any]: any
+		}
+	},
 
 	AssignJob: <M>(
 		self: BurrowType,
-		EggDef: EggDef<any>
+		EggDef: EggDef<M>
 	) -> QuailHandle,
 	OnComplete: (
 		self: BurrowType,
@@ -59,20 +56,20 @@ type BurrowType = {
 	) -> (),
 	NextEgg: (self: BurrowType) -> Thread,
 
-	Eggs: EggInterface
+	Clutch: ClutchInterface
 }
 
 type EggList = setmetatable<{
 	[number]: BurrowType
 }, {}> | {}
-
+----------------------------------------------------
 type EggPacket<Assignable> = {
 	Name: string,
 	ID: number,
 	RequestType: string,
 	RequestAmount: number,
-	Data: Assignable,
-	State: number,
+	Data: Assignable?,
+	State: number?,
 	ThreadContext: number?
 }
 
@@ -82,7 +79,7 @@ export type EggDef<Type> = {
 	Type: string,
 	Data: Type
 }
-
+----------------------------------------------------
 type CompletedPacket = {
 	any
 }
@@ -112,10 +109,8 @@ export type QuailHandle = {
 
 	Handle: EggPacket<any>
 }
-
 ----------------------------------------------------
 local QuailHandle = {} :: QuailHandle
-
 
 function QuailHandle:Remove()
 	self.Handle.State = 2
@@ -142,9 +137,7 @@ function Nest:Scheduler(): ()
 	while not Nest.NoInternalSchedule do
 		for _, Routine in self.RoutineList do
 			Routine()
-		end
-
-		Task.wait(self.Timer)
+		end; Task.wait(self.Timer)
 	end
 end
 Task.spawn(Nest.Scheduler, Nest)
@@ -153,7 +146,7 @@ function Nest:NewNest(EggAmount: number)
 	local NewList = {
 		Egg = nil :: any,
 		Nest = {},
-		Eggs = {},
+		Clutch = {},
 		BevyList = {},
 		CurrentEgg = 1
 	} :: BurrowType
@@ -168,32 +161,29 @@ function Nest:NewNest(EggAmount: number)
 
 	end; NewList.Egg = NewList.Nest[1]
 
-	local BevyUpdate: EggPacket<typeof(Nest.BevyList)> = {
-		Data = Nest.BevyList,
-		ID = RGEN:nextInteger(0, 999999990),
+	local BevyUpdate: EggPacket<typeof(NewList.BevyList)> = {
+		Data = NewList.BevyList,
+		ID = RGEN:nextInteger(0, 999999999),
 		Name = "Sync",
 		RequestAmount = 0,
-		RequestType = RequestEnum[3],
-		State = 0
+		RequestType = RequestEnum[3]
 	}
 
-	local BevyRequest: EggPacket<typeof(Nest.BevyList)> = {
-		Data = Nest.BevyList,
-		ID = RGEN:nextInteger(0, 999999990),
+	local BevyRequest: EggPacket<nil> = {
+		ID = RGEN:nextInteger(0, 999999999),
 		Name = "Request",
 		RequestAmount = 0,
-		RequestType = RequestEnum[4],
-		State = 0
+		RequestType = RequestEnum[4]
 	}
 
 	local function InternalScheduler(): ()
-		local self: BurrowType = NewList
 		local JobCount: number = 0
-		local Egg: Thread = self:NextEgg()
+		local Egg: Thread = NewList:NextEgg()
+		
 		BevyUpdate.Data = NewList.BevyList
 		Egg:send(BevyUpdate)
 		
-		for _, Module in self.Eggs do
+		for _, Module in NewList.Clutch do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 or Job.RequestAmount == 0 then
 					Module.Jobs[Index] = nil
@@ -201,7 +191,8 @@ function Nest:NewNest(EggAmount: number)
 				elseif Job.State == 1 then
 					continue
 				end
-				Job.ThreadContext = self.CurrentEgg
+				
+				Job.ThreadContext = NewList.CurrentEgg
 				Job.RequestAmount = if Job.RequestAmount > 0 then
 										Job.RequestAmount - 1 
 									else 
@@ -211,16 +202,19 @@ function Nest:NewNest(EggAmount: number)
 			end
 		end
 
+		local Received: EggPacket<CompletedPacket>
+		local Callback: (...any) -> ()
+
 		if JobCount > 0 then
 			repeat JobCount -= 1;
-				--yields on receive
-				local Received: EggPacket<CompletedPacket> = Egg:receive()
-			
 
-				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
+				--yields on receive
+				Received = Egg:receive()
+			
+				Callback = NewList.Clutch[Received.Name].Callbacks[Received.ID]
 
 				if Callback then
-					Callback(Received.Data)
+					Callback(Received.Data) ; continue
 				else
 					print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
 				end
@@ -245,13 +239,13 @@ function Nest:NewNest(EggAmount: number)
 		return NextEgg
 	end
 
-	function NewList:OnComplete(ModuleName: string, ID: number, fn: () -> ()): ()
-		self.Eggs[ModuleName].Callbacks[ID] = fn
+	function NewList:OnComplete(ModuleName: string, ID: number, fn: (...any) -> ()): ()
+		self.Clutch[ModuleName].Callbacks[ID] = fn
 	end
 
-	function NewList:AssignJob<M>(EggDef: EggDef<any>): QuailHandle
+	function NewList:AssignJob<M>(EggDef: EggDef<M>): QuailHandle
 		
-		local NewPacket: EggPacket<typeof(EggDef.Data)> = {
+		local NewPacket: EggPacket<M> = {
 			Name = EggDef.ModuleName,
 			ID = RGEN:nextInteger(0,9999999999999),
 			RequestType = if type(EggDef.Type) ~= "string" then
@@ -264,10 +258,9 @@ function Nest:NewNest(EggAmount: number)
 			ThreadContext = 0
 		}
 
-		NewList.Eggs[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
+		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
 
-		local NewHandle = table.clone(QuailHandle)
-		NewHandle.Handle = NewPacket
+		local NewHandle = table.clone(QuailHandle) ; NewHandle.Handle = NewPacket
 
 		return NewHandle
 	end
@@ -277,23 +270,24 @@ function Nest:NewNest(EggAmount: number)
 	return NewList
 end
 
-function Nest:AddEgg(pEgg: EggSetupDef): ()
+function Nest:AddModule(pEgg: ModuleSetupDef): ()
 
 	local CurrentNest = pEgg.Nest
 	for i, Egg in CurrentNest.Nest do
-		for Name, Module in pEgg.Modules do
+		for Name, ModulePath in pEgg.Modules do
+
 			local NewPacket: EggPacket<ModulePacket> = {
 				Name = Name,
 				ID = RGEN:nextInteger(0,9999999999999),
 				RequestType = RequestEnum[1],
 				RequestAmount = 0,
 				Data = {
-					Path = Module
+					Path = ModulePath
 				},
 				State = 0
 			}
 
-			CurrentNest.Eggs[Name] = {
+			CurrentNest.Clutch[Name] = {
 				Jobs = {},
 				Callbacks = {}
 			}
@@ -309,7 +303,7 @@ function Nest:AddEgg(pEgg: EggSetupDef): ()
 
 end
 
-function Nest:RemoveEgg()
+function Nest:RemoveModule()
 end
 
 

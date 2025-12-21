@@ -20,22 +20,20 @@ Or alternatively, code that doesn't need to run on the main thread, or particula
 ```luau
 local Nest = require("@Nest") --Assuming aliased, if not, path directly
 
-local NewNest = Nest:NewNest(4) --Amount of threads in the pool
+local NewNest = Nest:NewNest(5) --Amount of threads in the pool
 
-local Eggs: Nest.EggSetupDef = {
+local Modules: Nest.ModuleSetupDef = {
     Nest = NewNest,
     Modules = {
         ["Test"] = "./example/test"
     }
 }
 
-Nest:AddEgg(Eggs)
+Nest:AddModule(Modules)
 
-local NewBuffer: buffer = buffer.create(10)
+local num: number = 5
 
-buffer.writef64(NewBuffer, 0, 10)
-
-local Data = { T = NewBuffer }
+local Data = { T = num }
 
 local Def: Nest.EggDef<typeof(Data)> = {
     ModuleName = "Test",
@@ -62,15 +60,9 @@ local Quail = NewNest:AssignJob(Def)
 ]==]--
 
 --ModuleName, PacketID, Callback: (Data) -> ()
-NewNest:OnComplete("Test", Quail.Handle.ID, function(Data)
-    
-    print(buffer.readf64(Data.T, 0))
-
-    buffer.writef64(
-        NewBuffer, 
-        0, 
-        buffer.readf64(Data.T, 0)
-    )
+NewNest:OnComplete("Test", Quail.Handle.ID, function(ReturnData)
+    Quail.Handle.Data.T = ReturnData.T
+    print(Quail.Handle.Data.T)
 end)
 ```
 
