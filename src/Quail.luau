@@ -48,12 +48,14 @@ type BurrowType = {
 		self: BurrowType,
 		EggDef: EggDef<M>
 	) -> QuailHandle,
+
 	OnComplete: (
 		self: BurrowType,
 		ModuleName: string, 
 		ID: number, 
 		fn: (...any) -> ()
 	) -> (),
+	
 	NextEgg: (self: BurrowType) -> Thread,
 
 	Clutch: ClutchInterface
@@ -280,7 +282,7 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 				Name = Name,
 				ID = RGEN:nextInteger(0,9999999999999),
 				RequestType = RequestEnum[1],
-				RequestAmount = 0,
+				RequestAmount = 0 :: number,
 				Data = {
 					Path = ModulePath
 				},
