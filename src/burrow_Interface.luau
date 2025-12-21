@@ -7,7 +7,8 @@ type ThreadPacket<Assignable> = {
 	RequestType: string,
 	RequestAmount: number,
 	Data: Assignable,
-	State: number
+	State: number,
+	ThreadContext: number
 }
 
 type ModuleTable<Module> = {
@@ -20,7 +21,7 @@ type Field = {
 
 type Bevy = setmetatable<{}, {
 	__index: Field,
-	__newindex: (List: {}, Index: any, Value: any) -> ()
+	__newindex: Field
 }>
 
 type FieldTypes = {
@@ -28,11 +29,10 @@ type FieldTypes = {
 
 	Bevies: {[string]: Bevy},
 
-	New: (self: FieldTypes, Name: string) -> Bevy,
-	GetBevy: (self: FieldTypes, Name: string) -> Bevy,
-	SyncBevy: (self: FieldTypes, Data: {
-		Data: Field,
-		Tracker: {[string]: {[any]: number}}
+	New: (self: FieldTypes, Name: string) -> Field,
+	GetBevy: (self: FieldTypes, Name: string) -> Field,
+	SyncBevy: (self: FieldTypes, Packet: {
+		Data: Field
 	}) -> (), 
 	GetChanges: (self: FieldTypes) -> Field,
 
@@ -52,67 +52,45 @@ type DataPacket = {
 	any
 }
 
-type BevyData = {
-
-}
+type BevyData = Field
 ----------------------------------------------------
 local Field = {
 	Fields = {}
 } :: FieldTypes 
 
-local BevyChanges = {
-	Fields = {},
-} :: FieldTypes
-
 function Field:New(Name)
-
-	if self.Fields[Name] then
-		return self.Bevies[Name]
+	if not self.Fields[Name] then
+		self.Fields[Name] = {}
 	end
-
-	self.Fields[Name] = {}
 	
-	local NewBevy: Bevy = setmetatable(
-		{},
-		{
-			__index = self.Fields[Name],
-			__newindex = function(List: {}, Index: any, Value: any)
-				self.Fields[Index] = Value
-				BevyChanges.Fields[Index] = self.Fields[Index]
-			end
-		}
-	); self.Bevies[Name] = NewBevy
 
-	return NewBevy
+	return self.Fields[Name]
 end
 
 function Field:GetBevy(Name)
-	return self.Bevies[Name]
+	return self.Fields[Name]
 end
 
-function Field:SyncBevy(Data)
-	for Index, Value in Data.Data do
-		if not self.Fields[Index] then
-			self.Fields[Index] = {}
+function Field:SyncBevy(Packet: ThreadPacket<BevyData>)
+	for Index,Value in Packet.Data do
+		if not Field.Fields[Index] then
+			Field.Fields[Index] = {}
 		end
-
-		self.Fields[Index] = Value
+		Field.Fields[Index] = Value
 	end
-
-	BevyChanges.Fields = Data.Data
-	
 end
 
-function Field:GetChanges(Name)
-	return BevyChanges.Fields
+function Field:GetChanges()
+	return Field.Fields
 end
 
 ----------------------------------------------------
 local ModuleTable = {}
 
-local PacketCase = {
+local PacketCase: {
+	[string]: (Packet: ThreadPacket<any>) -> ()
+} = {
 	Module = function(Packet: ThreadPacket<ModulePacket>)
-		local ReturnState: boolean = false
 		local ModulePath = Packet.Data.Path
 		
 		if not ModuleTable[Packet.Name] then
@@ -120,30 +98,27 @@ local PacketCase = {
 		end
 
 		ModuleTable[Packet.Name][#ModuleTable[Packet.Name]] = require(ModulePath) :: any
-
-		Packet.Data = {Success = ReturnState}
-		return Packet
 	end,
 
 	Send = function(Packet: ThreadPacket<DataPacket>)
 		local Modules = ModuleTable[Packet.Name]
-		Packet.Data = Modules[math.random(0, #Modules)](Packet.Data)
+		Packet.Data = Modules[math.random(0, #Modules)](Packet.Data, Field, Packet.ThreadContext)
 
-		return Packet
+		m.send(Packet)
 	end,
 
-	Sync = function()
-		
+	Sync = function(Packet: ThreadPacket<any>)
+		Field:SyncBevy(Packet)
+	end,
+
+	RequestSync = function()
+		m.send(Field:GetChanges())
 	end
 }
 
-local function PassResults(Packet: ThreadPacket<DataPacket>)
-	-- print("resultdata", Result.Data)
-	m.send(PacketCase[Packet.RequestType](Packet))
-end
-
 local function Main()
 	while true do
-		task.spawn(PassResults, m.receive())
+		local Packet: ThreadPacket<any> = m.receive()
+		task.spawn(PacketCase[Packet.RequestType], Packet)
 	end
 end; Main()

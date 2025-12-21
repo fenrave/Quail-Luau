@@ -9,6 +9,8 @@ export type Nest = {
 	AddEgg: (self: Nest, pEgg: EggSetupDef) -> (),
 	RemoveEgg: (self: Nest, Name: string) -> (),
 
+	BevyList: {any},
+
 	Scheduler: (self: Nest) -> (),
 	RoutineList: {() -> ()},
 	ToggleScheduler: (self: Nest) -> (),
@@ -43,6 +45,7 @@ type BurrowType = {
 	Egg: Thread,
 	Nest: {Thread},
 	CurrentEgg: number,
+	BevyList: {any},
 
 	AssignJob: <M>(
 		self: BurrowType,
@@ -69,7 +72,8 @@ type EggPacket<Assignable> = {
 	RequestType: string,
 	RequestAmount: number,
 	Data: Assignable,
-	State: number
+	State: number,
+	ThreadContext: number?
 }
 
 export type EggDef<Type> = {
@@ -97,7 +101,8 @@ Nest.EggList = setmetatable({}, {
 local RequestEnum: {string} = {
 	[1] = "Module",
 	[2] = "Send",
-	[3] = "Request"
+	[3] = "Sync",
+	[4] = "RequestSync"
 }
 ----------------------------------------------------
 export type QuailHandle = {
@@ -128,7 +133,7 @@ end
 Nest.RoutineList = {}
 Nest.Timer = 1/240
 Nest.NoInternalSchedule = false
-
+----------------------------------------------------
 function Nest:ToggleScheduler()
 	Nest.NoInternalSchedule = not Nest.NoInternalSchedule --Inverts state
 end
@@ -149,6 +154,7 @@ function Nest:NewNest(EggAmount: number)
 		Egg = nil :: any,
 		Nest = {},
 		Eggs = {},
+		BevyList = {},
 		CurrentEgg = 1
 	} :: BurrowType
 
@@ -162,10 +168,31 @@ function Nest:NewNest(EggAmount: number)
 
 	end; NewList.Egg = NewList.Nest[1]
 
+	local BevyUpdate: EggPacket<typeof(Nest.BevyList)> = {
+		Data = Nest.BevyList,
+		ID = RGEN:nextInteger(0, 999999990),
+		Name = "Sync",
+		RequestAmount = 0,
+		RequestType = RequestEnum[3],
+		State = 0
+	}
+
+	local BevyRequest: EggPacket<typeof(Nest.BevyList)> = {
+		Data = Nest.BevyList,
+		ID = RGEN:nextInteger(0, 999999990),
+		Name = "Request",
+		RequestAmount = 0,
+		RequestType = RequestEnum[4],
+		State = 0
+	}
+
 	local function InternalScheduler(): ()
 		local self: BurrowType = NewList
 		local JobCount: number = 0
 		local Egg: Thread = self:NextEgg()
+		BevyUpdate.Data = NewList.BevyList
+		Egg:send(BevyUpdate)
+		
 		for _, Module in self.Eggs do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 or Job.RequestAmount == 0 then
@@ -174,7 +201,7 @@ function Nest:NewNest(EggAmount: number)
 				elseif Job.State == 1 then
 					continue
 				end
-				print("jobdata",Job.Data)
+				Job.ThreadContext = self.CurrentEgg
 				Job.RequestAmount = if Job.RequestAmount > 0 then
 										Job.RequestAmount - 1 
 									else 
@@ -188,7 +215,8 @@ function Nest:NewNest(EggAmount: number)
 			repeat JobCount -= 1;
 				--yields on receive
 				local Received: EggPacket<CompletedPacket> = Egg:receive()
-				print("receiveddata", Received.Data)
+			
+
 				local Callback = self.Eggs[Received.Name].Callbacks[Received.ID]
 
 				if Callback then
@@ -198,8 +226,11 @@ function Nest:NewNest(EggAmount: number)
 				end
 			until JobCount <= 0
 		end
-			
-	end ; table.insert(self.RoutineList, InternalScheduler)
+
+		Egg:send(BevyRequest)
+		
+		NewList.BevyList = Egg:receive()
+	end; table.insert(self.RoutineList, InternalScheduler)
 
 	function NewList:NextEgg(): Thread
 		local NextIndex = self.CurrentEgg + 1
@@ -229,7 +260,8 @@ function Nest:NewNest(EggAmount: number)
 					EggDef.Type,
 			RequestAmount = EggDef.Limit or -1,
 			Data = EggDef.Data,
-			State = 0
+			State = 0,
+			ThreadContext = 0
 		}
 
 		NewList.Eggs[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
@@ -260,15 +292,20 @@ function Nest:AddEgg(pEgg: EggSetupDef): ()
 				},
 				State = 0
 			}
-	
+
 			CurrentNest.Eggs[Name] = {
 				Jobs = {},
 				Callbacks = {}
 			}
-
+			
 			Egg:send(NewPacket)
 		end
+		
 	end
+	
+	-- for _, Egg in CurrentNest.Nest do
+	-- 	Egg:receive()
+	-- end
 
 end
 
