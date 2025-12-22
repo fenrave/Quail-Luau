@@ -1,20 +1,10 @@
 --------------------------------------------
-export type ThreadPacket<Assignable> = {
-	Name: string,
-	ID: number,
-	RequestType: string,
-	RequestAmount: number,
-	Data: Assignable,
-	State: number,
-	ThreadContext: number
-}
-
 export type EggPacket<Assignable> = {
 	Name: string,
 	ID: number,
 	RequestType: string,
 	RequestAmount: number,
-	Data: Assignable?,
+	Data: Assignable,
 	State: number?,
 	ThreadContext: number?
 }
@@ -90,9 +80,7 @@ export type BurrowType = {
 	Nest: {Thread},
 	CurrentEgg: number,
 	BevyList: {
-		[string]: {
-			[any]: any
-		}
+		[string]: Dict
 	},
 
 	AssignJob: <M>(

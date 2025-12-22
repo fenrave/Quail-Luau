@@ -22,7 +22,7 @@ function Field.Get(Name)
 	end; return BevyList.Flock[Name]
 end
 
-function Field:SyncBevy(Packet:  q.ThreadPacket<Bevy>)
+function Field:SyncBevy(Packet:  q.EggPacket<Bevy>)
 	for Index,Value in Packet.Data do
 		if not BevyList.Flock[Index] then
 			BevyList.Flock[Index] = {}
@@ -37,9 +37,9 @@ end
 local ModuleTable = {}
 
 local PacketCase: {
-	[string]: (Packet:  q.ThreadPacket<any>) -> ()
+	[string]: (Packet:  q.EggPacket<any>) -> ()
 } = {
-	Module = function(Packet: q.ThreadPacket<q.ModulePacket>)
+	Module = function(Packet: q.EggPacket<q.ModulePacket>)
 		local ModulePath = Packet.Data.Path
 		
 		if not ModuleTable[Packet.Name] then
@@ -49,7 +49,7 @@ local PacketCase: {
 		ModuleTable[Packet.Name] = require(ModulePath) :: any
 	end,
 
-	Send = function(Packet:  q.ThreadPacket<q.DataPacket>)
+	Send = function(Packet:  q.EggPacket<q.DataPacket>)
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
 			{Bevy = Field, Covy = Covy, ToggleFlush = ToggleCovyFlush}, 
@@ -57,7 +57,7 @@ local PacketCase: {
 		); m.send(Packet)
 	end,
 
-	Sync = function(Packet:  q.ThreadPacket<any>)
+	Sync = function(Packet:  q.EggPacket<any>)
 		if DoFlush then
 			Covy:flush()
 		end; Field:SyncBevy(Packet)
@@ -70,7 +70,7 @@ local PacketCase: {
 
 local function Main(): ()
 	while true do
-		local Packet:  q.ThreadPacket<any> = m.receive()
+		local Packet:  q.EggPacket<any> = m.receive()
 		task.spawn(PacketCase[Packet.RequestType], Packet)
 	end
 end; Main()
