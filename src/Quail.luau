@@ -68,7 +68,7 @@ function Nest:NewNest(EggAmount: number)
 	} :: q.BurrowType
 
 	for i: number = 1, EggAmount or 5 do
-		local NewEgg: Thread = Egg.fromModule("./burrow_Interface")
+		local NewEgg: Thread = Egg.fromModule("./Burrow")
 
 		table.insert(
 			NewList.Nest,
@@ -79,14 +79,14 @@ function Nest:NewNest(EggAmount: number)
 
 	local BevyUpdate: q.EggPacket<typeof(NewList.BevyList)> = {
 		Data = NewList.BevyList,
-		ID = RGEN:nextInteger(0, 999999999),
+		ID = RGEN:nextInteger(0, 9999999999999),
 		Name = "Sync",
 		RequestAmount = 0,
 		RequestType = RequestEnum[3]
 	}
 
 	local BevyRequest: q.EggPacket<nil> = {
-		ID = RGEN:nextInteger(0, 999999999),
+		ID = RGEN:nextInteger(0, 9999999999999),
 		Name = "Request",
 		RequestAmount = 0,
 		RequestType = RequestEnum[4]
