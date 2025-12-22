@@ -5,7 +5,7 @@ local q = require("./Types.Quail")
 type Bevy = q.Field
 ----------------------------------------------------
 local Covy: BufferSink = zune.io.createBufferSink(
-	{size = 1024} :: BufferSinkOptions
+	{size = 2048} :: BufferSinkOptions
 )
 local DoFlush: boolean = false
 local function ToggleCovyFlush()
@@ -68,7 +68,7 @@ local PacketCase: {
 	end
 }
 
-local function Main()
+local function Main(): ()
 	while true do
 		local Packet:  q.ThreadPacket<any> = m.receive()
 		task.spawn(PacketCase[Packet.RequestType], Packet)
