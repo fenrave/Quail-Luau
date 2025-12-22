@@ -7,6 +7,10 @@ type Bevy = q.Field
 local Covy: BufferSink = zune.io.createBufferSink(
 	{size = 1024} :: BufferSinkOptions
 )
+local DoFlush: boolean = false
+local function ToggleCovyFlush()
+	DoFlush = not DoFlush
+end
 ----------------------------------------------------
 local BevyList = {Flock = {} :: q.Field}
 
@@ -15,9 +19,7 @@ local Field = {} :: q.FieldTypes
 function Field.Get(Name)
 	if not BevyList.Flock[Name] then
 		BevyList.Flock[Name] = {}
-	end
-
-	return BevyList.Flock[Name]
+	end; return BevyList.Flock[Name]
 end
 
 function Field:SyncBevy(Packet:  q.ThreadPacket<Bevy>)
@@ -50,14 +52,15 @@ local PacketCase: {
 	Send = function(Packet:  q.ThreadPacket<q.DataPacket>)
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
-			{Bevy = Field, Covy = Covy}, 
+			{Bevy = Field, Covy = Covy, ToggleFlush = ToggleCovyFlush}, 
 			Packet.ThreadContext
 		); m.send(Packet)
 	end,
 
 	Sync = function(Packet:  q.ThreadPacket<any>)
-		Covy:flush()
-		Field:SyncBevy(Packet)
+		if DoFlush then
+			Covy:flush()
+		end; Field:SyncBevy(Packet)
 	end,
 
 	RequestSync = function()
