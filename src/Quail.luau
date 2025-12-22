@@ -1,96 +1,16 @@
 --!strict
+local q = require("./Types.Quail")
+----------------------------------------------------
 local Egg = zune.thread
-local Nest = {} :: Nest
 local Task = zune.task
 local RGEN = zune.random.new()
+local Nest = {} :: q.Nest
 ----------------------------------------------------
-export type Nest = {
-	NewNest: (self: Nest, EggAmount: number) -> BurrowType,
-	AddModule: (self: Nest, pEgg: ModuleSetupDef) -> (),
-	RemoveModule: (self: Nest, Name: string) -> (),
-
-	Scheduler: (self: Nest) -> (),
-	RoutineList: {() -> ()},
-	ToggleScheduler: (self: Nest) -> (),
-
-	NoInternalSchedule: boolean,
-
-	Timer: number,
-	EggList: EggList
-}
-
-export type ModuleSetupDef = {
-	Nest: BurrowType,
-
-	Modules: {
-		[string]: string
-	}
-}
+export type ModuleSetupDef = q.ModuleSetupDef
+export type EggDef<Def> = q.EggDef<Def>
+export type Dict = q.Dict
 ----------------------------------------------------
-type ClutchInterface = {
-	[string]: {
-		Jobs: {[number]: EggPacket<any>},
-		Callbacks: {[number]: (...any)->()}
-	}
-}
-
-type BurrowType = {
-	Egg: Thread,
-	Nest: {Thread},
-	CurrentEgg: number,
-	BevyList: {
-		[string]: {
-			[any]: any
-		}
-	},
-
-	AssignJob: <M>(
-		self: BurrowType,
-		EggDef: EggDef<M>
-	) -> QuailHandle,
-
-	OnComplete: (
-		self: BurrowType,
-		ModuleName: string, 
-		ID: number, 
-		fn: (...any) -> ()
-	) -> (),
-	
-	NextEgg: (self: BurrowType) -> Thread,
-
-	Clutch: ClutchInterface
-}
-
-type EggList = setmetatable<{
-	[number]: BurrowType
-}, {}> | {}
-----------------------------------------------------
-type EggPacket<Assignable> = {
-	Name: string,
-	ID: number,
-	RequestType: string,
-	RequestAmount: number,
-	Data: Assignable?,
-	State: number?,
-	ThreadContext: number?
-}
-
-export type EggDef<Type> = {
-	ModuleName: string,
-	Limit: number,
-	Type: string,
-	Data: Type
-}
-----------------------------------------------------
-type CompletedPacket = {
-	any
-}
-
-type ModulePacket = {
-	Path: string
-}
-----------------------------------------------------
-local InternalList: EggList = {}
+local InternalList: q.EggList = {}
 Nest.EggList = setmetatable({}, {
 		__index = InternalList,
 		__newindex = InternalList
@@ -103,16 +23,9 @@ local RequestEnum: {string} = {
 	[3] = "Sync",
 	[4] = "RequestSync"
 }
-----------------------------------------------------
-export type QuailHandle = {
-	Remove: (self: QuailHandle) -> (),
-	Disable: (self: QuailHandle) -> (),
-	Enable: (self: QuailHandle) -> (),
 
-	Handle: EggPacket<any>
-}
 ----------------------------------------------------
-local QuailHandle = {} :: QuailHandle
+local QuailHandle = {} :: q.QuailHandle
 
 function QuailHandle:Remove()
 	self.Handle.State = 2
@@ -126,6 +39,7 @@ end
 function QuailHandle:Enable()
 	self.Handle.State = 0
 end
+
 ----------------------------------------------------
 Nest.RoutineList = {}
 Nest.Timer = 1/240
@@ -151,7 +65,7 @@ function Nest:NewNest(EggAmount: number)
 		Clutch = {},
 		BevyList = {},
 		CurrentEgg = 1
-	} :: BurrowType
+	} :: q.BurrowType
 
 	for i: number = 1, EggAmount or 5 do
 		local NewEgg: Thread = Egg.fromModule("./burrow_Interface")
@@ -163,7 +77,7 @@ function Nest:NewNest(EggAmount: number)
 
 	end; NewList.Egg = NewList.Nest[1]
 
-	local BevyUpdate: EggPacket<typeof(NewList.BevyList)> = {
+	local BevyUpdate: q.EggPacket<typeof(NewList.BevyList)> = {
 		Data = NewList.BevyList,
 		ID = RGEN:nextInteger(0, 999999999),
 		Name = "Sync",
@@ -171,7 +85,7 @@ function Nest:NewNest(EggAmount: number)
 		RequestType = RequestEnum[3]
 	}
 
-	local BevyRequest: EggPacket<nil> = {
+	local BevyRequest: q.EggPacket<nil> = {
 		ID = RGEN:nextInteger(0, 999999999),
 		Name = "Request",
 		RequestAmount = 0,
@@ -204,7 +118,7 @@ function Nest:NewNest(EggAmount: number)
 			end
 		end
 
-		local Received: EggPacket<CompletedPacket>
+		local Received: q.EggPacket<q.CompletedPacket>
 		local Callback: (...any) -> ()
 
 		if JobCount > 0 then
@@ -228,8 +142,16 @@ function Nest:NewNest(EggAmount: number)
 		NewList.BevyList = Egg:receive()
 	end; table.insert(self.RoutineList, InternalScheduler)
 
+	function NewList:InitBevy(Name: string)
+		if not self.BevyList[Name] then
+			self.BevyList[Name] = {}
+		end
+
+		return self.BevyList[Name]
+	end
+
 	function NewList:NextEgg(): Thread
-		local NextIndex = self.CurrentEgg + 1
+		local NextIndex: number = self.CurrentEgg + 1
 		local NextEgg: Thread = self.Nest[NextIndex]
 		
 		if not NextEgg then
@@ -237,17 +159,16 @@ function Nest:NewNest(EggAmount: number)
 			NextIndex = 1
 		end; self.CurrentEgg = NextIndex
 
-		self.Egg = NextEgg
-		return NextEgg
+		self.Egg = NextEgg ; return NextEgg
 	end
 
 	function NewList:OnComplete(ModuleName: string, ID: number, fn: (...any) -> ()): ()
 		self.Clutch[ModuleName].Callbacks[ID] = fn
 	end
 
-	function NewList:AssignJob<M>(EggDef: EggDef<M>): QuailHandle
+	function NewList:AssignJob<M>(EggDef: q.EggDef<M>): q.QuailHandle
 		
-		local NewPacket: EggPacket<M> = {
+		local NewPacket: q.EggPacket<M> = {
 			Name = EggDef.ModuleName,
 			ID = RGEN:nextInteger(0,9999999999999),
 			RequestType = if type(EggDef.Type) ~= "string" then
@@ -278,7 +199,7 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 	for i, Egg in CurrentNest.Nest do
 		for Name, ModulePath in pEgg.Modules do
 
-			local NewPacket: EggPacket<ModulePacket> = {
+			local NewPacket: q.EggPacket<q.ModulePacket> = {
 				Name = Name,
 				ID = RGEN:nextInteger(0,9999999999999),
 				RequestType = RequestEnum[1],

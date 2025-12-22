@@ -1,113 +1,62 @@
 local m = zune.thread
 local task = zune.task
+local q = require("./Types.Quail")
 ----------------------------------------------------
-type ThreadPacket<Assignable> = {
-	Name: string,
-	ID: number,
-	RequestType: string,
-	RequestAmount: number,
-	Data: Assignable,
-	State: number,
-	ThreadContext: number
-}
-
-type ModuleTable<Module> = {
-	[string]: {Module}
-}
-
-type Field = {
-	[string]: {[any]: any}
-}
-
-type Bevy = setmetatable<{}, {
-	__index: Field,
-	__newindex: Field
-}>
-
-type FieldTypes = {
-	Fields: Field,
-
-	Bevies: {[string]: Bevy},
-
-	New: (self: FieldTypes, Name: string) -> Field,
-	GetBevy: (self: FieldTypes, Name: string) -> Field,
-	SyncBevy: (self: FieldTypes, Packet: {
-		Data: Field
-	}) -> (), 
-	GetChanges: (self: FieldTypes) -> Field,
-
-	Data: {
-			[string]: {
-				[any]: any
-			}
-	}
-}
+type Bevy = q.Field
 ----------------------------------------------------
-type ModulePacket = {
-	Path: string?,
-	Success: boolean
-}
-
-type DataPacket = {
-	any
-}
-
-type BevyData = Field
+local Covy: BufferSink = zune.io.createBufferSink(
+	{size = 1024} :: BufferSinkOptions
+)
 ----------------------------------------------------
-local Field = {
-	Fields = {}
-} :: FieldTypes 
+local BevyList = {Flock = {} :: q.Field}
 
-function Field:New(Name)
-	if not self.Fields[Name] then
-		self.Fields[Name] = {}
+local Field = {} :: q.FieldTypes 
+
+function Field.Get(Name)
+	if not BevyList.Flock[Name] then
+		BevyList.Flock[Name] = {}
 	end
-	
 
-	return self.Fields[Name]
+	return BevyList.Flock[Name]
 end
 
-function Field:GetBevy(Name)
-	return self.Fields[Name]
-end
-
-function Field:SyncBevy(Packet: ThreadPacket<BevyData>)
+function Field:SyncBevy(Packet:  q.ThreadPacket<Bevy>)
 	for Index,Value in Packet.Data do
-		if not Field.Fields[Index] then
-			Field.Fields[Index] = {}
-		end
-		Field.Fields[Index] = Value
+		if not BevyList.Flock[Index] then
+			BevyList.Flock[Index] = {}
+		end; BevyList.Flock[Index] = Value
 	end
 end
 
 function Field:GetChanges()
-	return Field.Fields
+	return BevyList.Flock
 end
-
 ----------------------------------------------------
 local ModuleTable = {}
 
 local PacketCase: {
-	[string]: (Packet: ThreadPacket<any>) -> ()
+	[string]: (Packet:  q.ThreadPacket<any>) -> ()
 } = {
-	Module = function(Packet: ThreadPacket<ModulePacket>)
+	Module = function(Packet: q.ThreadPacket<q.ModulePacket>)
 		local ModulePath = Packet.Data.Path
 		
 		if not ModuleTable[Packet.Name] then
 			ModuleTable[Packet.Name] = {}
 		end
 
-		ModuleTable[Packet.Name][#ModuleTable[Packet.Name]] = require(ModulePath) :: any
+		ModuleTable[Packet.Name] = require(ModulePath) :: any
 	end,
 
-	Send = function(Packet: ThreadPacket<DataPacket>)
-		local Modules = ModuleTable[Packet.Name]
-		Packet.Data = Modules[math.random(0, #Modules)](Packet.Data, Field, Packet.ThreadContext)
-
-		m.send(Packet)
+	Send = function(Packet:  q.ThreadPacket<q.DataPacket>)
+		Packet.Data = ModuleTable[Packet.Name](
+			Packet.Data, 
+			{Bevy = Field, Covy = Covy}, 
+			Packet.ThreadContext
+		); m.send(Packet)
 	end,
 
-	Sync = function(Packet: ThreadPacket<any>)
+	Sync = function(Packet:  q.ThreadPacket<any>)
+		Covy:flush()
 		Field:SyncBevy(Packet)
 	end,
 
@@ -118,7 +67,7 @@ local PacketCase: {
 
 local function Main()
 	while true do
-		local Packet: ThreadPacket<any> = m.receive()
+		local Packet:  q.ThreadPacket<any> = m.receive()
 		task.spawn(PacketCase[Packet.RequestType], Packet)
 	end
 end; Main()
