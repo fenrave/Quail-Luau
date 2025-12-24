@@ -162,8 +162,8 @@ function Nest:NewNest(EggAmount: number)
 		self.Egg = NextEgg ; return NextEgg
 	end
 
-	function NewList:OnComplete(ModuleName: string, ID: number, fn: (...any) -> ()): ()
-		self.Clutch[ModuleName].Callbacks[ID] = fn
+	function NewList:OnComplete(Handle: q.EggPacket<any>, fn: <Type>(...Type) -> ()): ()
+		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
 	end
 
 	function NewList:AssignJob<M>(EggDef: q.EggDef<M>): q.QuailHandle
@@ -220,15 +220,9 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 		
 	end
 	
-	-- for _, Egg in CurrentNest.Nest do
-	-- 	Egg:receive()
-	-- end
-
 end
 
 function Nest:RemoveModule()
 end
-
-
 
 return Nest

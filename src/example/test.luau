@@ -1,11 +1,11 @@
-local q = require("../Types.Quail")
+local QuailTypes = require("../Types.Quail")
 
 type Data = {
     T: number
 }
 
-local function Test(Data: Data, Sys: q.ThreadIncl, Context: number): Data
-    local NewBevy = Sys.Bevy.Get("Test")
+local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
+    local NewBevy = Interface.Bevy.Get("Test")
 
     NewBevy["Hello"]  += 1
 

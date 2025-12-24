@@ -45,8 +45,8 @@ local Quail = NewNest:AssignJob(Def)
 	@Quail:Enable() sets the packet State to 0, enabling callbacks
 ]==]--
 
---ModuleName, PacketID, Callback: (Data) -> ()
-NewNest:OnComplete("Test", Quail.Handle.ID, function(ReturnData)
+--PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
+NewNest:OnComplete(Quail.Handle, function(ReturnData)
 	Quail.Handle.Data.T = ReturnData.T
 	print(Quail.Handle.Data.T)
 end)

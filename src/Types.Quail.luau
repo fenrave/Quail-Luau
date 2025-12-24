@@ -16,17 +16,13 @@ export type EggDef<Type> = {
 	Data: Type
 }
 --------------------------------------------
-export type ModuleTable<Module> = {
-	[string]: {Module}
+export type TypedList<K,V> = {
+	[K]: V
 }
 
-export type Dict = {
-	[any]: any
-}
-
-export type Field = {
-	[string]: Dict
-}
+export type Dict = TypedList<any, any>
+export type ModuleTable<Module> = TypedList<string, {Module}>
+export type Field = TypedList<string, Dict>
 --[Packet Types]----------------------------
 export type ModulePacket = {
 	Path: string?,
@@ -39,7 +35,7 @@ export type DataPacket = {
 
 export type CompletedPacket = DataPacket
 --------------------------------------------
-export type ThreadIncl = {
+export type ThreadInterface = {
 	Bevy: FieldTypes,
 	Covy: BufferSink
 }
@@ -47,21 +43,17 @@ export type ThreadIncl = {
 export type ModuleSetupDef = {
 	Nest: BurrowType,
 
-	Modules: {
-		[string]: string
-	}
+	Modules: TypedList<string, string>
 }
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
-		Jobs: {[number]: EggPacket<any>},
-		Callbacks: {[number]: (...any)->()}
+		Jobs: TypedList<number, EggPacket<any> >,
+		Callbacks: TypedList<number, (...any)->()>
 	}
 }
 
-export type EggList = setmetatable<{
-	[number]: BurrowType
-}, {}> | {}
+export type EggList = TypedList<number, BurrowType>
 --------------------------------------------
 
 export type FieldTypes = {
@@ -77,11 +69,9 @@ export type FieldTypes = {
 
 export type BurrowType = {
 	Egg: Thread,
-	Nest: {Thread},
+	Nest: TypedList<number, Thread>,
 	CurrentEgg: number,
-	BevyList: {
-		[string]: Dict
-	},
+	BevyList: Field,
 
 	AssignJob: <M>(
 		self: BurrowType,
@@ -90,12 +80,11 @@ export type BurrowType = {
 
 	OnComplete: (
 		self: BurrowType,
-		ModuleName: string,
-		ID: number,
-		fn: (...any) -> ()
+		Handle: EggPacket<any>,
+		fn: <Type>(...Type) -> ()
 	) -> (),
 
-	InitBevy: (self: BurrowType) -> {[any]: any},
+	InitBevy: (self: BurrowType) -> Dict,
 	NextEgg: (self: BurrowType) -> Thread,
 
 	Clutch: ClutchInterface
@@ -115,7 +104,7 @@ export type Nest = {
 	RemoveModule: (self: Nest, Name: string) -> (),
 
 	Scheduler: (self: Nest) -> (),
-	RoutineList: {() -> ()},
+	RoutineList: TypedList<number, () -> ()>,
 	ToggleScheduler: (self: Nest) -> (),
 
 	NoInternalSchedule: boolean,

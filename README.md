@@ -5,11 +5,11 @@
 
 <sub>***WIP, First Draft***<sub>
 
-The purpose of this project is to easily create ThreadPools via the Zune Runtime's Thread library.
+The purpose of this project is to easily create Thread Queues via the Zune Runtime's Thread library.
 
-While multi-threading isn't necessarily the best solution for all problems, inspite of how some people seem to think, easily creating ThreadPool interfaces can quickly accelerate math heavy code, especially in an interpreted language context.
+While multi-threading isn't necessarily the best solution for all problems, inspite of how some people seem to think, easily creating Thread Pool/Queue interfaces can accelerate programs with math heavy code, or take a serious strain off the main thread so less intensive code can execute in its intended manner, especially in an interpreted language context where math isn't particularly efficient, although Luau generally resolves most of that math overhead with native codegen.
 
-Or alternatively, code that doesn't need to run on the main thread, or particularly often, can be offloaded to a secondary thread, so long as there's data to be processed.
+Long term goals are to implement differing kinds of ThreadPool back-ends & to improve work sharing between threads.
 
 ## Usage
 
@@ -20,49 +20,54 @@ Or alternatively, code that doesn't need to run on the main thread, or particula
 ```luau
 local Nest = require("@Nest") --Assuming aliased, if not, path directly
 
-local NewNest = Nest:NewNest(5) --Amount of threads in the pool
+local NewNest = Nest:NewNest(5) --Amount of threads in the pool/queue
 
 local Modules: Nest.ModuleSetupDef = {
-    Nest = NewNest,
-    Modules = {
-        ["Test"] = "./example/test"
-    }
+	Nest = NewNest,
+	Modules = {
+		["Test"] = "./example/test"
+	}
 }
 
 Nest:AddModule(Modules)
 
 local num: number = 5
 
-local Data = { T = num }
+local Data: Nest.Dict = { T = num }
+
+local Bevy = NewNest:InitBevy("Test")
+
+Bevy["Hello"] = 1
 
 local Def: Nest.EggDef<typeof(Data)> = {
-    ModuleName = "Test",
-    --Name of initialized module in nest, so the packet knows where to go
+	ModuleName = "Test",
+	--Name of initialized module in nest, so the packet knows where to go
 
-    Limit = -1,
-    --The amount of times the callback will be called.
-    --If desired, -1 will allow it to run indefinitely.
+	Limit = -1,
+	--The amount of times the callback will be called.
+	--If desired, -1 will allow it to run indefinitely.
 
-    Type = "Send",
-    --List of request types in module under Enums
+	Type = "Send",
+	--List of request types in module under Enums
+	--Should only use Send for jobs
 
-    Data = Data
-    --The module will be passed this as an arg, so put whatever you want into here
+	Data = Data
+	--The module will be passed this as an arg, so put whatever you want into here
 }
 
 local Quail = NewNest:AssignJob(Def)
 --Returns a handle that you can use to manipulate the packet with
 
 --[==[
-    @Quail:Remove() sets the packet State to 2, destroying the job & handle
-    @Quail:Disable() sets the packet State to 1, disabling callbacks
-    @Quail:Enable() sets the packet State to 0, enabling callbacks
+	@Quail:Remove() sets the packet State to 2, destroying the job & handle
+	@Quail:Disable() sets the packet State to 1, disabling callbacks
+	@Quail:Enable() sets the packet State to 0, enabling callbacks
 ]==]--
 
---ModuleName, PacketID, Callback: (Data) -> ()
-NewNest:OnComplete("Test", Quail.Handle.ID, function(ReturnData)
-    Quail.Handle.Data.T = ReturnData.T
-    print(Quail.Handle.Data.T)
+--PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
+NewNest:OnComplete(Quail.Handle, function(ReturnData)
+	Quail.Handle.Data.T = ReturnData.T
+	print(Quail.Handle.Data.T)
 end)
 ```
 
@@ -77,12 +82,18 @@ The idea here is to have everything running constantly. Data is updated in real 
 *Minimal Receiving module side*
 
 ```luau
+local QuailTypes = require("@Types.Quail")
+
 type Data = {
-    T: buffer
+    T: number
 }
 
-local function Test(Data: Data): Data
-    buffer.writef64(Data.T, 0, buffer.readf64(Data.T, 0) + 10)
+local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
+    local NewBevy = Interface.Bevy.Get("Test")
+
+    NewBevy["Hello"]  += 1
+
+    Data.T += 10
     
     return Data
 end
