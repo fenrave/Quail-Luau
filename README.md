@@ -88,6 +88,7 @@ type Data = {
     T: number
 }
 
+--Context is the current execution thread
 local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
     local NewBevy = Interface.Bevy.Get("Test")
 
