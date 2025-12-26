@@ -61,7 +61,7 @@ export type ClutchInterface = {
 export type EggList = TypedList<number, BurrowType>
 --------------------------------------------
 export type FieldTypes = {
-	Get: (Name: string) -> Dict,
+	Get: (Name: string, Meta: boolean?) -> Dict,
 	SyncBevy: (
 		self: FieldTypes, 
 		Packet: EggPacket<Field>

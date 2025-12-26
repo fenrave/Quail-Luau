@@ -64,7 +64,7 @@ Nest.EggList = setmetatable({}, {
 )
 
 Nest.RoutineList = {}
-Nest.Timer = 1/240
+Nest.Timer = 1
 Nest.NoInternalSchedule = false
 ----------------------------------------------------
 function Nest:ToggleScheduler()

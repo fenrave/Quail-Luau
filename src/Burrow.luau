@@ -16,14 +16,35 @@ local BevyList: {Flock: q.Field} = {Flock = {}}
 
 local Field = {} :: q.FieldTypes 
 
-
-
-function Field.Get(Name)
+function Field.Get(Name, Meta)
 	if not BevyList.Flock[Name] then
 		BevyList.Flock[Name] = {}
 	end
 	
-	local Bevy = BevyList.Flock[Name]
+	local Flock = BevyList.Flock[Name]
+	local Bevy
+	if Meta then
+		Bevy = setmetatable({
+
+		},
+		{
+			__index = function(_, Index: any): any
+				if not Flock[Index] then
+					Flock[Index] = 0
+				end; return Flock[Index]
+			end,
+
+			__newindex = function(_, Index: any, Value: any): ()
+				if not Flock[Index] then
+					Flock[Index] = Value ; return
+				end
+
+				Flock[Index] = Value
+			end
+		})
+	else
+		Bevy = Flock
+	end
 
 	return Bevy :: q.Dict
 end

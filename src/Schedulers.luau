@@ -6,9 +6,11 @@ local Task = zune.task
 ----------------------------------------------------
 local SchedulerList = {} :: q.SchedulerList
 ----------------------------------------------------
+type JobCache = {[q.BurrowType]: {[Thread]: number}}
+----------------------------------------------------
 local function Receiver(Egg: Thread, NewList: q.BurrowType): ()
 	local Received: q.EggPacket<q.CompletedPacket> = Egg:receive()
-		
+
 	local Callback: (...any) -> () = NewList.Clutch[Received.Name].Callbacks[Received.ID]
 
 	if Callback then
@@ -18,9 +20,8 @@ local function Receiver(Egg: Thread, NewList: q.BurrowType): ()
 	end
 end
 ----------------------------------------------------
-local ParallelJobCache: {
-	[q.BurrowType]: {[Thread]: number}
-} = {}
+local ParallelJobCache: JobCache = {}
+local QueueJobCache: JobCache = {}
 ----------------------------------------------------
 function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 	local JobCount: number = 0
@@ -59,7 +60,7 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 		ParallelJobCache[NewList] = {}
 	end; local JobCount = ParallelJobCache[NewList]
 
-	for _,Egg in NewList.Nest do
+	for Current,Egg in NewList.Nest do
 		JobCount[Egg] = 0
 		for _, Module in NewList.Clutch do
 			for Index, Job in Module.Jobs do
@@ -70,7 +71,7 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 					continue
 				end
 
-				Job.ThreadContext = NewList.CurrentEgg
+				Job.ThreadContext = Current
 
 				JobCount[Egg] += 1 ; Task.spawn(Egg.send, Egg, Job)
 			end
