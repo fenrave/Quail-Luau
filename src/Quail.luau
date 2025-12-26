@@ -1,9 +1,10 @@
 --!strict
 local q = require("./Types.Quail")
+local Schedulers = require("./Schedulers")
 ----------------------------------------------------
 local Egg = zune.thread
 local Task = zune.task
-local RGEN: Random= zune.random.new()
+local RGEN: Random = zune.random.new()
 local Nest = {} :: q.Nest
 ----------------------------------------------------
 export type ModuleSetupDef = q.ModuleSetupDef
@@ -13,20 +14,32 @@ type TypedList<K, V> = q.TypedList<K, V>
 type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
-local InternalList: q.EggList = {}
-Nest.EggList = setmetatable({}, {
-		__index = InternalList,
-		__newindex = InternalList
-	}
-)
+local NumberCache: TypedList<number, number> = {}
+local ThreadCache: TypedList<number, Thread> = {}
 
-local RequestEnum: TypedList<number, string> = {
-	[1] = "Module",
-	[2] = "Send",
-	[3] = "Sync",
-	[4] = "RequestSync"
-}
+----------------------------------------------------
+local function GenID(): number
+	local Number = RGEN:nextInteger(1000000000000, 9999999999999)
 
+	if table.find(NumberCache, Number) then
+		return GenID()
+	end; table.insert(NumberCache, Number)
+
+	return Number
+end
+----------------------------------------------------
+for i = 1, Egg.getCpuCount() do
+	local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
+	table.insert(ThreadCache, NewEgg)
+end
+
+local function GetThreads(Count: number): {Thread}
+	local ThreadTable: TypedList<number, Thread> = table.clone(ThreadCache)
+
+	for i: number = 1, #ThreadCache - Count do
+		table.remove(ThreadTable, math.random(1, #ThreadTable))
+	end; return ThreadTable
+end
 ----------------------------------------------------
 local QuailHandle = {} :: q.QuailHandle
 
@@ -42,8 +55,14 @@ end
 function QuailHandle:Enable()
 	self.Handle.State = 0
 end
-
 ----------------------------------------------------
+local InternalList: q.EggList = {}
+Nest.EggList = setmetatable({}, {
+		__index = InternalList,
+		__newindex = InternalList
+	}
+)
+
 Nest.RoutineList = {}
 Nest.Timer = 1/240
 Nest.NoInternalSchedule = false
@@ -61,7 +80,11 @@ function Nest:Scheduler(): ()
 end
 Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
-function Nest:NewNest(EggAmount: number)
+function Nest:NewNest(EggAmount: number, SchedType: string?)
+	if SchedType == nil then
+		SchedType = "Queue"
+	end; assert(SchedType ~= nil)
+
 	local NewList = {
 		Egg = nil :: any,
 		Nest = {},
@@ -70,77 +93,29 @@ function Nest:NewNest(EggAmount: number)
 		CurrentEgg = 1
 	} :: q.BurrowType
 
-	for i: number = 1, EggAmount or 5 do
-		local NewEgg: Thread = Egg.fromModule("./Burrow")
+	NewList.InternalScheduler = Schedulers[SchedType]
 
-		table.insert(
-			NewList.Nest,
-			NewEgg
-		); NewEgg:start()
-
-	end; NewList.Egg = NewList.Nest[1]
+	NewList.Nest = GetThreads(EggAmount)
+	NewList.Egg = NewList.Nest[1]
 
 	local BevyUpdate: q.EggPacket<typeof(NewList.BevyList)> = {
 		Data = NewList.BevyList,
-		ID = RGEN:nextInteger(0, 9999999999999),
+		ID = GenID(),
 		Name = "Sync",
 		RequestAmount = 0,
-		RequestType = RequestEnum[3]
+		RequestType = q.RequestEnum[3]
 	}
 
 	local BevyRequest: q.EggPacket<nil> = {
-		ID = RGEN:nextInteger(0, 9999999999999),
+		ID = GenID(),
 		Name = "Request",
 		RequestAmount = 0,
-		RequestType = RequestEnum[4]
+		RequestType = q.RequestEnum[4]
 	}
 
-	local function InternalScheduler(): ()
-		local JobCount: number = 0
-		local Egg: Thread = NewList:NextEgg()
-		
-		BevyUpdate.Data = NewList.BevyList
-		Egg:send(BevyUpdate)
-		
-		for _, Module in NewList.Clutch do
-			for Index, Job in Module.Jobs do
-				if Job.State == 2 or Job.RequestAmount == 0 then
-					Module.Jobs[Index] = nil
-					continue
-				elseif Job.State == 1 then
-					continue
-				end
-				
-				Job.ThreadContext = NewList.CurrentEgg
-				Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
-					
-				JobCount += 1 ; Egg:send(Job)
-			end
-		end
-
-		local Received: q.EggPacket<q.CompletedPacket>
-		local Callback: (...any) -> ()
-
-		if JobCount > 0 then
-			repeat JobCount -= 1;
-
-				--yields on receive
-				Received = Egg:receive()
-			
-				Callback = NewList.Clutch[Received.Name].Callbacks[Received.ID]
-
-				if Callback then
-					Callback(Received.Data) ; continue
-				else
-					print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
-				end
-			until JobCount <= 0
-		end
-
-		Egg:send(BevyRequest)
-		
-		NewList.BevyList = Egg:receive()
-	end; table.insert(self.RoutineList, InternalScheduler)
+	local function Internal(): ()
+		NewList.InternalScheduler(Schedulers, NewList, BevyUpdate, BevyRequest)
+	end; table.insert(self.RoutineList, Internal)
 
 	function NewList:InitBevy(Name: string)
 		if not self.BevyList[Name] then
@@ -162,7 +137,7 @@ function Nest:NewNest(EggAmount: number)
 		self.Egg = NextEgg ; return NextEgg
 	end
 
-	function NewList:OnComplete(Handle: EggPacket<DataPacket>, fn: <Type>(...Type) -> ()): ()
+	function NewList:OnComplete(Handle, fn: <Type>(...Type) -> ()): ()
 		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
 	end
 
@@ -170,9 +145,9 @@ function Nest:NewNest(EggAmount: number)
 		
 		local NewPacket: q.EggPacket<M> = {
 			Name = EggDef.ModuleName,
-			ID = RGEN:nextInteger(0,9999999999999),
+			ID = GenID(),
 			RequestType = if type(EggDef.Type) ~= "string" then
-					RequestEnum[EggDef.Type]
+					q.RequestEnum[EggDef.Type]
 				else
 					EggDef.Type,
 			RequestAmount = EggDef.Limit or -1,
@@ -194,15 +169,15 @@ function Nest:NewNest(EggAmount: number)
 end
 
 function Nest:AddModule(pEgg: ModuleSetupDef): ()
-
 	local CurrentNest = pEgg.Nest
+
 	for i, Egg in CurrentNest.Nest do
 		for Name, ModulePath in pEgg.Modules do
 
 			local NewPacket: q.EggPacket<q.ModulePacket> = {
 				Name = Name,
-				ID = RGEN:nextInteger(0,9999999999999),
-				RequestType = RequestEnum[1],
+				ID = GenID(),
+				RequestType = q.RequestEnum[1],
 				RequestAmount = 0 :: number,
 				Data = {
 					Path = ModulePath

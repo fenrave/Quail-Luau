@@ -9,9 +9,9 @@ type Shared = {
 }
 
 local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
-    local NewBevy: Shared = Interface.Bevy.Get("Test")
+    -- local NewBevy: Shared = Interface.Bevy.Get("Test")
 
-    NewBevy["Hello"]  += 1
+    -- NewBevy["Hello"]  += 1
 
     Data.T += 10
     

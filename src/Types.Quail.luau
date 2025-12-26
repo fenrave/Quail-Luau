@@ -43,6 +43,13 @@ export type ModuleSetupDef = {
 
 	Modules: TypedList<string, string>
 }
+
+export type SchedulerType = (
+	self: SchedulerList,
+	NewList: BurrowType,
+	BevyUpdate: EggPacket<Field>, 
+	BevyRequest: EggPacket<nil>
+) -> ()
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
@@ -53,7 +60,6 @@ export type ClutchInterface = {
 
 export type EggList = TypedList<number, BurrowType>
 --------------------------------------------
-
 export type FieldTypes = {
 	Get: (Name: string) -> Dict,
 	SyncBevy: (
@@ -69,7 +75,7 @@ export type BurrowType = {
 	Nest: TypedList<number, Thread>,
 	CurrentEgg: number,
 	BevyList: Field,
-
+	InternalScheduler: SchedulerType,
 	AssignJob: <M>(
 		self: BurrowType,
 		EggDef: EggDef<M>
@@ -96,12 +102,18 @@ export type QuailHandle = {
 }
 
 export type Nest = {
-	NewNest: (self: Nest, EggAmount: number) -> BurrowType,
+	NewNest: (
+		self: Nest,
+		EggAmount: number,
+		SchedType: string?
+	) -> BurrowType,
+
 	AddModule: (self: Nest, pEgg: ModuleSetupDef) -> (),
 	RemoveModule: (self: Nest, Name: string) -> (),
 
 	Scheduler: (self: Nest) -> (),
 	RoutineList: TypedList<number, () -> ()>,
+
 	ToggleScheduler: (self: Nest) -> (),
 
 	NoInternalSchedule: boolean,
@@ -110,4 +122,13 @@ export type Nest = {
 	EggList: EggList
 }
 
-return 1
+export type SchedulerList = TypedList<string, SchedulerType>
+--------------------------------------------
+local RequestEnum: TypedList<number, string> = {
+	[1] = "Module",
+	[2] = "Send",
+	[3] = "Sync",
+	[4] = "RequestSync"
+}
+--------------------------------------------
+return {RequestEnum = RequestEnum}

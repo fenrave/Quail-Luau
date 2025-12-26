@@ -1,7 +1,6 @@
 local Nest = require("./src/Quail")
 
-
-local NewNest = Nest:NewNest(5) --Amount of threads in the pool
+local NewNest = Nest:NewNest(50, "Parallel") --Amount of threads in the pool
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
