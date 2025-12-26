@@ -25,12 +25,12 @@ local QueueJobCache: JobCache = {}
 ----------------------------------------------------
 function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 	local Egg: Thread = NewList:NextEgg()
+	local CurrentEgg = NewList.CurrentEgg
 
 	if not QueueJobCache[NewList] then
 		QueueJobCache[NewList] = {}
 	end; local JobCount = QueueJobCache[NewList]
 	
-
 	BevyUpdate.Data = NewList.BevyList ; Egg:send(BevyUpdate)
 
 	JobCount[Egg] = 0
@@ -41,9 +41,8 @@ function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 				continue
 			elseif Job.State == 1 then
 				continue
-			end
+			end; Job.ThreadContext = CurrentEgg
 
-			Job.ThreadContext = NewList.CurrentEgg
 			Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
 
 			JobCount[Egg] += 1 ; Egg:send(Job)
@@ -77,10 +76,10 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 					continue
 				end
 
-				Job.ThreadContext = Current
 				if not table.find(SubCache, Job) then
 					table.insert(SubCache, Job)
-				end
+				end; Job.ThreadContext = Current
+				
 				JobCount[Egg] += 1 ; Task.spawn(Egg.send, Egg, Job)
 			end
 		end
@@ -94,10 +93,9 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 
 	for _,Job in SubCache do
 		if Job.RequestAmount == 0 then
-			Job.State = 2
-			continue
+			Job.State = 2 ; continue
 		end
-		
+
 		Job.RequestAmount = if Job.RequestAmount > 0 then Job.RequestAmount - 1 else -1
 	end
 
