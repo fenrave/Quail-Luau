@@ -47,7 +47,7 @@ export type ModuleSetupDef = {
 export type SchedulerType = (
 	self: SchedulerList,
 	NewList: BurrowType,
-	BevyUpdate: EggPacket<Field>, 
+	BevyUpdate: EggPacket<Field>,
 	BevyRequest: EggPacket<nil>
 ) -> ()
 --------------------------------------------
@@ -63,7 +63,7 @@ export type EggList = TypedList<number, BurrowType>
 export type FieldTypes = {
 	Get: (Name: string, Meta: boolean?) -> Dict,
 	SyncBevy: (
-		self: FieldTypes, 
+		self: FieldTypes,
 		Packet: EggPacket<Field>
 	) -> (),
 

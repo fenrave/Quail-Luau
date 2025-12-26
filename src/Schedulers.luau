@@ -24,12 +24,16 @@ local ParallelJobCache: JobCache = {}
 local QueueJobCache: JobCache = {}
 ----------------------------------------------------
 function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
-	local JobCount: number = 0
 	local Egg: Thread = NewList:NextEgg()
+
+	if not QueueJobCache[NewList] then
+		QueueJobCache[NewList] = {}
+	end; local JobCount = QueueJobCache[NewList]
 	
-	BevyUpdate.Data = NewList.BevyList
-	Egg:send(BevyUpdate)
-	
+
+	BevyUpdate.Data = NewList.BevyList ; Egg:send(BevyUpdate)
+
+	JobCount[Egg] = 0
 	for _, Module in NewList.Clutch do
 		for Index, Job in Module.Jobs do
 			if Job.State == 2 or Job.RequestAmount == 0 then
@@ -38,18 +42,18 @@ function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 			elseif Job.State == 1 then
 				continue
 			end
-			
+
 			Job.ThreadContext = NewList.CurrentEgg
 			Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
-				
-			JobCount += 1 ; Egg:send(Job)
+
+			JobCount[Egg] += 1 ; Egg:send(Job)
 		end
 	end
 
-	if JobCount > 0 then
-		repeat JobCount -= 1;
+	if JobCount[Egg] > 0 then
+		repeat JobCount[Egg] -= 1;
 			Receiver(Egg, NewList)
-		until JobCount <= 0
+		until JobCount[Egg] <= 0
 	end
 
 	Egg:send(BevyRequest) ; NewList.BevyList = Egg:receive()
@@ -59,6 +63,8 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 	if not ParallelJobCache[NewList] then
 		ParallelJobCache[NewList] = {}
 	end; local JobCount = ParallelJobCache[NewList]
+
+	local SubCache: {q.EggPacket<any>} = {}
 
 	for Current,Egg in NewList.Nest do
 		JobCount[Egg] = 0
@@ -72,7 +78,9 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 				end
 
 				Job.ThreadContext = Current
-
+				if not table.find(SubCache, Job) then
+					table.insert(SubCache, Job)
+				end
 				JobCount[Egg] += 1 ; Task.spawn(Egg.send, Egg, Job)
 			end
 		end
@@ -82,6 +90,15 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 		repeat JobCount[Egg] -= 1;
 			Receiver(Egg, NewList)
 		until JobCount[Egg] <= 0
+	end
+
+	for _,Job in SubCache do
+		if Job.RequestAmount == 0 then
+			Job.State = 2
+			continue
+		end
+		
+		Job.RequestAmount = if Job.RequestAmount > 0 then Job.RequestAmount - 1 else -1
 	end
 
 end

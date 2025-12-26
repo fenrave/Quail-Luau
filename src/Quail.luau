@@ -128,7 +128,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	function NewList:NextEgg(): Thread
 		local NextIndex: number = self.CurrentEgg + 1
 		local NextEgg: Thread = self.Nest[NextIndex]
-		
+
 		if not NextEgg then
 			NextEgg = self.Nest[1]
 			NextIndex = 1
@@ -142,7 +142,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	end
 
 	function NewList:AssignJob<M>(EggDef: q.EggDef<M>): q.QuailHandle
-		
+
 		local NewPacket: q.EggPacket<M> = {
 			Name = EggDef.ModuleName,
 			ID = GenID(),
@@ -189,12 +189,12 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 				Jobs = {},
 				Callbacks = {}
 			}
-			
+
 			Egg:send(NewPacket)
 		end
-		
+
 	end
-	
+
 end
 
 function Nest:RemoveModule()
