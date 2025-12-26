@@ -21,7 +21,7 @@ export type TypedList<K,V> = {
 }
 
 export type Dict = TypedList<any, any>
-export type ModuleTable<Module> = TypedList<string, {Module}>
+export type ModuleTable<Module> = TypedList<string, TypedList<number, Module>>
 export type Field = TypedList<string, Dict>
 --[Packet Types]----------------------------
 export type ModulePacket = {
@@ -29,9 +29,7 @@ export type ModulePacket = {
 	Success: boolean?
 }
 
-export type DataPacket = {
-	any
-}
+export type DataPacket = TypedList<any, any>
 
 export type CompletedPacket = DataPacket
 --------------------------------------------
@@ -48,7 +46,7 @@ export type ModuleSetupDef = {
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
-		Jobs: TypedList<number, EggPacket<any> >,
+		Jobs: TypedList<number, EggPacket<any>>,
 		Callbacks: TypedList<number, (...any)->()>
 	}
 }
@@ -60,9 +58,8 @@ export type FieldTypes = {
 	Get: (Name: string) -> Dict,
 	SyncBevy: (
 		self: FieldTypes, 
-		Packet: {
-			Data: Field
-	}) -> (),
+		Packet: EggPacket<Field>
+	) -> (),
 
 	GetChanges: (self: FieldTypes) -> Field
 }

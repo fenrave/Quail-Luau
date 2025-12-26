@@ -12,14 +12,20 @@ local function ToggleCovyFlush()
 	DoFlush = not DoFlush
 end
 ----------------------------------------------------
-local BevyList = {Flock = {} :: q.Field}
+local BevyList: {Flock: q.Field} = {Flock = {}}
 
 local Field = {} :: q.FieldTypes 
+
+
 
 function Field.Get(Name)
 	if not BevyList.Flock[Name] then
 		BevyList.Flock[Name] = {}
-	end; return BevyList.Flock[Name]
+	end
+	
+	local Bevy = BevyList.Flock[Name]
+
+	return Bevy :: q.Dict
 end
 
 function Field:SyncBevy(Packet:  q.EggPacket<Bevy>)
@@ -36,9 +42,7 @@ end
 ----------------------------------------------------
 local ModuleTable = {}
 
-local PacketCase: {
-	[string]: (Packet:  q.EggPacket<any>) -> ()
-} = {
+local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 	Module = function(Packet: q.EggPacket<q.ModulePacket>)
 		local ModulePath = Packet.Data.Path
 		
@@ -49,7 +53,7 @@ local PacketCase: {
 		ModuleTable[Packet.Name] = require(ModulePath) :: any
 	end,
 
-	Send = function(Packet:  q.EggPacket<q.DataPacket>)
+	Send = function(Packet: q.EggPacket<q.DataPacket>)
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
 			{Bevy = Field, Covy = Covy, ToggleFlush = ToggleCovyFlush}, 
@@ -57,7 +61,7 @@ local PacketCase: {
 		); m.send(Packet)
 	end,
 
-	Sync = function(Packet:  q.EggPacket<any>)
+	Sync = function(Packet: q.EggPacket<any>)
 		if DoFlush then
 			Covy:flush()
 		end; Field:SyncBevy(Packet)
@@ -70,7 +74,7 @@ local PacketCase: {
 
 local function Main(): ()
 	while true do
-		local Packet:  q.EggPacket<any> = m.receive()
+		local Packet: q.EggPacket<any> = m.receive()
 		task.spawn(PacketCase[Packet.RequestType], Packet)
 	end
 end; Main()

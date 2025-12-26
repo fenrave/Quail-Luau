@@ -4,8 +4,12 @@ type Data = {
     T: number
 }
 
+type Shared = {
+    Hello: number
+}
+
 local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
-    local NewBevy = Interface.Bevy.Get("Test")
+    local NewBevy: Shared = Interface.Bevy.Get("Test")
 
     NewBevy["Hello"]  += 1
 
@@ -13,6 +17,5 @@ local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: 
     
     return Data
 end
-
 
 return Test

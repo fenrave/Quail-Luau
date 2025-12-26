@@ -3,12 +3,15 @@ local q = require("./Types.Quail")
 ----------------------------------------------------
 local Egg = zune.thread
 local Task = zune.task
-local RGEN = zune.random.new()
+local RGEN: Random= zune.random.new()
 local Nest = {} :: q.Nest
 ----------------------------------------------------
 export type ModuleSetupDef = q.ModuleSetupDef
 export type EggDef<Def> = q.EggDef<Def>
 export type Dict = q.Dict
+type TypedList<K, V> = q.TypedList<K, V>
+type DataPacket = q.DataPacket
+type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
 local InternalList: q.EggList = {}
 Nest.EggList = setmetatable({}, {
@@ -17,7 +20,7 @@ Nest.EggList = setmetatable({}, {
 	}
 )
 
-local RequestEnum: {string} = {
+local RequestEnum: TypedList<number, string> = {
 	[1] = "Module",
 	[2] = "Send",
 	[3] = "Sync",
@@ -109,10 +112,7 @@ function Nest:NewNest(EggAmount: number)
 				end
 				
 				Job.ThreadContext = NewList.CurrentEgg
-				Job.RequestAmount = if Job.RequestAmount > 0 then
-										Job.RequestAmount - 1 
-									else 
-										-1
+				Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
 					
 				JobCount += 1 ; Egg:send(Job)
 			end
@@ -162,7 +162,7 @@ function Nest:NewNest(EggAmount: number)
 		self.Egg = NextEgg ; return NextEgg
 	end
 
-	function NewList:OnComplete(Handle: q.EggPacket<any>, fn: <Type>(...Type) -> ()): ()
+	function NewList:OnComplete(Handle: EggPacket<DataPacket>, fn: <Type>(...Type) -> ()): ()
 		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
 	end
 
