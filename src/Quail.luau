@@ -77,8 +77,7 @@ function Nest:Scheduler(): ()
 			Routine()
 		end; Task.wait(self.Timer)
 	end
-end
-Task.spawn(Nest.Scheduler, Nest)
+end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
 function Nest:NewNest(EggAmount: number, SchedType: string?)
 	if SchedType == nil then
@@ -98,7 +97,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	NewList.Nest = GetThreads(EggAmount)
 	NewList.Egg = NewList.Nest[1]
 
-	local BevyUpdate: q.EggPacket<typeof(NewList.BevyList)> = {
+	local BevyUpdate: q.EggPacket<q.Field> = {
 		Data = NewList.BevyList,
 		ID = GenID(),
 		Name = "Sync",
@@ -197,7 +196,14 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 
 end
 
-function Nest:RemoveModule()
+function Nest:RemoveModule(pEgg: ModuleSetupDef)
+	local CurrentNest = pEgg.Nest
+
+	for i, Egg in CurrentNest.Nest do
+		for Name in pEgg.Modules do
+			CurrentNest.Clutch[Name] = nil
+		end
+	end
 end
 
 return Nest

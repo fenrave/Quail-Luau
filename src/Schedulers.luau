@@ -1,7 +1,6 @@
 --!strict
 local q = require("./Types.Quail")
 ----------------------------------------------------
-local RGEN: Random = zune.random.new()
 local Task = zune.task
 ----------------------------------------------------
 local SchedulerList = {} :: q.SchedulerList
@@ -25,12 +24,12 @@ local QueueJobCache: JobCache = {}
 ----------------------------------------------------
 function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 	local Egg: Thread = NewList:NextEgg()
-	local CurrentEgg = NewList.CurrentEgg
+	local CurrentEgg: number = NewList.CurrentEgg
 
 	if not QueueJobCache[NewList] then
 		QueueJobCache[NewList] = {}
 	end; local JobCount = QueueJobCache[NewList]
-	
+
 	BevyUpdate.Data = NewList.BevyList ; Egg:send(BevyUpdate)
 
 	JobCount[Egg] = 0
