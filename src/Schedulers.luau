@@ -7,6 +7,16 @@ local SchedulerList = {} :: q.SchedulerList
 ----------------------------------------------------
 type JobCache = {[q.BurrowType]: {[Thread]: number}}
 ----------------------------------------------------
+local PseudoPacket: q.EggPacket<q.Parallel> = {
+	Name = "Temp",
+	ID = 1,
+	RequestType = "Send",
+	RequestAmount = -1,
+	Data = {},
+	State = 0,
+	ThreadContext = 0
+}
+----------------------------------------------------
 local function Receiver(Egg: Thread, NewList: q.BurrowType): ()
 	local Received: q.EggPacket<q.CompletedPacket> = Egg:receive()
 
@@ -43,7 +53,7 @@ function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 			end; Job.ThreadContext = CurrentEgg
 
 			Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
-
+			
 			JobCount[Egg] += 1 ; Egg:send(Job)
 		end
 	end
@@ -62,7 +72,7 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 		ParallelJobCache[NewList] = {}
 	end; local JobCount = ParallelJobCache[NewList]
 
-	local SubCache: {q.EggPacket<any>} = {}
+	local SubCache: {q.EggPacket<q.Parallel>} = {}
 
 	for Current,Egg in NewList.Nest do
 		JobCount[Egg] = 0
@@ -75,26 +85,36 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 					continue
 				end
 
+				if not Job.Data[Current] then
+					continue
+				end
+
 				if not table.find(SubCache, Job) then
 					table.insert(SubCache, Job)
 				end; Job.ThreadContext = Current
+
+				PseudoPacket.Data = Job.Data[Current]
+				PseudoPacket.ThreadContext = Current
+				PseudoPacket.ID = Job.ID
+				PseudoPacket.Name = Job.Name
 				
-				JobCount[Egg] += 1 ; Task.spawn(Egg.send, Egg, Job)
+				JobCount[Egg] += 1 ; Task.spawn(Egg.send, Egg, PseudoPacket)
 			end
 		end
 	end
 
 	for _, Egg in NewList.Nest do
-		repeat JobCount[Egg] -= 1;
-			Receiver(Egg, NewList)
-		until JobCount[Egg] <= 0
+		if JobCount[Egg] > 0 then
+			repeat JobCount[Egg] -= 1;
+				Receiver(Egg, NewList)
+			until JobCount[Egg] <= 0
+		end
 	end
 
 	for _,Job in SubCache do
 		if Job.RequestAmount == 0 then
 			Job.State = 2 ; continue
 		end
-
 		Job.RequestAmount = if Job.RequestAmount > 0 then Job.RequestAmount - 1 else -1
 	end
 

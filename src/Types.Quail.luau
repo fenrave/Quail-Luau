@@ -23,6 +23,13 @@ export type TypedList<K,V> = {
 export type Dict = TypedList<any, any>
 export type ModuleTable<Module> = TypedList<string, TypedList<number, Module>>
 export type Field = TypedList<string, Dict>
+export type Queue = TypedList<any, any>
+export type Parallel = TypedList<number, Dict>
+
+export type Schedulers = {
+	Queue: Queue,
+	Parallel: Parallel
+}
 --[Packet Types]----------------------------
 export type ModulePacket = {
 	Path: string?,
@@ -40,7 +47,6 @@ export type ThreadInterface = {
 
 export type ModuleSetupDef = {
 	Nest: BurrowType,
-
 	Modules: TypedList<string, string>
 }
 
@@ -76,9 +82,9 @@ export type BurrowType = {
 	CurrentEgg: number,
 	BevyList: Field,
 	InternalScheduler: SchedulerType,
-	AssignJob: <M>(
+	AssignJob: (
 		self: BurrowType,
-		EggDef: EggDef<M>
+		EggDef: EggDef<any>
 	) -> QuailHandle,
 
 	OnComplete: (

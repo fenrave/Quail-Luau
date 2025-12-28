@@ -12,21 +12,20 @@ local function ToggleCovyFlush()
 	DoFlush = not DoFlush
 end
 ----------------------------------------------------
-local BevyList: {Flock: q.Field} = {Flock = {}}
-
-local Field = {} :: q.FieldTypes 
-
+local BevyList: {Flock: {q.Field}} = {Flock = table.create(m.getCpuCount(), table.clone({}))}
+----------------------------------------------------
+local Field = {} :: q.FieldTypes
+local ThreadContext: number = 0
+----------------------------------------------------
 function Field.Get(Name, Meta)
-	if not BevyList.Flock[Name] then
-		BevyList.Flock[Name] = {}
+	if not BevyList.Flock[ThreadContext][Name] then
+		BevyList.Flock[ThreadContext][Name] = {}
 	end
 	
-	local Flock = BevyList.Flock[Name]
-	local Bevy
+	local Flock = BevyList.Flock[ThreadContext][Name]
+	local Bevy = Flock
 	if Meta then
-		Bevy = setmetatable({
-
-		},
+		Bevy = setmetatable({},
 		{
 			__index = function(_, Index: any): any
 				if not Flock[Index] then
@@ -42,23 +41,25 @@ function Field.Get(Name, Meta)
 				Flock[Index] = Value
 			end
 		})
-	else
-		Bevy = Flock
 	end
 
 	return Bevy :: q.Dict
 end
 
-function Field:SyncBevy(Packet:  q.EggPacket<Bevy>)
+function Field:SyncBevy(Packet: q.EggPacket<Bevy>)
 	for Index,Value in Packet.Data do
-		if not BevyList.Flock[Index] then
-			BevyList.Flock[Index] = {}
-		end; BevyList.Flock[Index] = Value
+		if not BevyList.Flock[ThreadContext] then
+			BevyList.Flock[ThreadContext] = {}
+		end
+
+		if not BevyList.Flock[ThreadContext][Index] then
+			BevyList.Flock[ThreadContext][Index] = {}
+		end; BevyList.Flock[ThreadContext][Index] = Value
 	end
 end
 
 function Field:GetChanges()
-	return BevyList.Flock
+	return BevyList.Flock[ThreadContext]
 end
 ----------------------------------------------------
 local ModuleTable = {}
@@ -75,6 +76,7 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 	end,
 
 	Send = function(Packet: q.EggPacket<q.DataPacket>)
+		ThreadContext = Packet.ThreadContext :: number
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
 			{Bevy = Field, Covy = Covy, ToggleFlush = ToggleCovyFlush}, 

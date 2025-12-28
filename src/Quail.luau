@@ -10,6 +10,35 @@ local Nest = {} :: q.Nest
 export type ModuleSetupDef = q.ModuleSetupDef
 export type EggDef<Def> = q.EggDef<Def>
 export type Dict = q.Dict
+----------------------------------------------------
+--[==[
+@Queue Data in the `Data` Field is sent to each Thread sequentially & in an ordered manner.
+
+```luau
+local Data: Queue = {
+	Hi = "hello!" --Each thread will be passed this data.
+}
+```
+You can sequentially mutate this data so each thread gets a new version on a Job Callback.
+
+]==]--
+export type Queue = q.Queue
+----------------------------------------------------
+--[==[
+@Parallel Data in the `Data` Field is distributed over each Thread. You assign which data goes to which
+Thread gets what data based on its array position.
+
+```luau
+local Data: Parallel = {
+	[1] = {}, --Thread 1
+	[2] = {}  --Thread 2
+	--etc
+}
+```
+You can mutate this data between Parallel cycles, as opposed to @Queue, which per Thread.
+]==]--
+export type Parallel = q.Parallel
+----------------------------------------------------
 type TypedList<K, V> = q.TypedList<K, V>
 type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
@@ -84,6 +113,8 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		SchedType = "Queue"
 	end; assert(SchedType ~= nil)
 
+	type SchedType = index<SchedType, SchedType>
+
 	local NewList = {
 		Egg = nil :: any,
 		Nest = {},
@@ -140,9 +171,9 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
 	end
 
-	function NewList:AssignJob<M>(EggDef: q.EggDef<M>): q.QuailHandle
+	function NewList:AssignJob(EggDef: q.EggDef<SchedType>): q.QuailHandle
 
-		local NewPacket: q.EggPacket<M> = {
+		local NewPacket: q.EggPacket<SchedType> = {
 			Name = EggDef.ModuleName,
 			ID = GenID(),
 			RequestType = if type(EggDef.Type) ~= "string" then
@@ -155,7 +186,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 			ThreadContext = 0
 		}
 
-		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket
+		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: EggPacket<any>
 
 		local NewHandle = table.clone(QuailHandle) ; NewHandle.Handle = NewPacket
 

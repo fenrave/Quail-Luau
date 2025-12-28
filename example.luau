@@ -1,6 +1,6 @@
 local Nest = require("./src/Quail")
 
-local NewNest = Nest:NewNest(50, "Parallel") --Amount of threads in the pool
+local NewNest = Nest:NewNest(50, "Queue") --Amount of threads in the pool
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
@@ -13,7 +13,14 @@ Nest:AddModule(Modules)
 
 local num: number = 5
 
-local Data: Nest.Dict = { T = num }
+-- local Data: Nest.Parallel = {
+-- 	[1] = {T = 1},
+-- 	[2] = {T = 10}
+-- }
+
+local Data: Nest.Queue = {
+	T = 1
+}
 
 local Bevy = NewNest:InitBevy("Test")
 
