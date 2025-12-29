@@ -62,12 +62,14 @@ for i = 1, Egg.getCpuCount() do
 	table.insert(ThreadCache, NewEgg)
 end
 
-local function GetThreads(Count: number): {Thread}
+local function GetThreads(Count: number, ID: number): {Thread}
 	local ThreadTable: TypedList<number, Thread> = table.clone(ThreadCache)
 
 	for i: number = 1, #ThreadCache - Count do
 		table.remove(ThreadTable, math.random(1, #ThreadTable))
-	end; return ThreadTable
+	end
+	
+	return ThreadTable
 end
 ----------------------------------------------------
 local QuailHandle = {} :: q.QuailHandle
@@ -120,12 +122,13 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		Nest = {},
 		Clutch = {},
 		BevyList = {},
-		CurrentEgg = 1
+		CurrentEgg = 1,
+		NestID = GenID()
 	} :: q.BurrowType
 
 	NewList.InternalScheduler = Schedulers[SchedType]
 
-	NewList.Nest = GetThreads(EggAmount)
+	NewList.Nest = GetThreads(EggAmount, NewList.NestID)
 	NewList.Egg = NewList.Nest[1]
 
 	local BevyUpdate: q.EggPacket<q.Field> = {
@@ -144,7 +147,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	}
 
 	local function Internal(): ()
-		NewList.InternalScheduler(Schedulers, NewList, BevyUpdate, BevyRequest)
+		NewList.InternalScheduler(Schedulers, NewList, BevyUpdate, BevyRequest, NewList.NestID)
 	end; table.insert(self.RoutineList, Internal)
 
 	function NewList:InitBevy(Name: string)

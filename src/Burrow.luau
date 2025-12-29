@@ -12,12 +12,16 @@ local function ToggleCovyFlush()
 	DoFlush = not DoFlush
 end
 ----------------------------------------------------
-local BevyList: {Flock: {q.Field}} = {Flock = table.create(m.getCpuCount(), table.clone({}))}
+local BevyList: {Flock: {q.Field}} = {Flock = {}}
 ----------------------------------------------------
 local Field = {} :: q.FieldTypes
 local ThreadContext: number = 0
 ----------------------------------------------------
 function Field.Get(Name, Meta)
+	if not BevyList.Flock[ThreadContext] then
+		BevyList.Flock[ThreadContext] = {}
+	end
+
 	if not BevyList.Flock[ThreadContext][Name] then
 		BevyList.Flock[ThreadContext][Name] = {}
 	end

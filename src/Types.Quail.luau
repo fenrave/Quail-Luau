@@ -30,6 +30,7 @@ export type Schedulers = {
 	Queue: Queue,
 	Parallel: Parallel
 }
+
 --[Packet Types]----------------------------
 export type ModulePacket = {
 	Path: string?,
@@ -54,7 +55,8 @@ export type SchedulerType = (
 	self: SchedulerList,
 	NewList: BurrowType,
 	BevyUpdate: EggPacket<Field>,
-	BevyRequest: EggPacket<nil>
+	BevyRequest: EggPacket<nil>,
+	NestID: number
 ) -> ()
 --------------------------------------------
 export type ClutchInterface = {
@@ -82,6 +84,7 @@ export type BurrowType = {
 	CurrentEgg: number,
 	BevyList: Field,
 	InternalScheduler: SchedulerType,
+	NestID: number,
 	AssignJob: (
 		self: BurrowType,
 		EggDef: EggDef<any>

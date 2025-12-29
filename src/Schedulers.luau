@@ -32,9 +32,10 @@ end
 local ParallelJobCache: JobCache = {}
 local QueueJobCache: JobCache = {}
 ----------------------------------------------------
-function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
+function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest, NestID: number): ()
 	local Egg: Thread = NewList:NextEgg()
 	local CurrentEgg: number = NewList.CurrentEgg
+	local CheckedList: q.TypedList<number, boolean> = {}
 
 	if not QueueJobCache[NewList] then
 		QueueJobCache[NewList] = {}
@@ -50,9 +51,11 @@ function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 				continue
 			elseif Job.State == 1 then
 				continue
-			end; Job.ThreadContext = CurrentEgg
+			end; Job.ThreadContext = tonumber(tostring(NestID..CurrentEgg))
 
-			Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
+			if not CheckedList[Job.ID] then
+				Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
+			end; CheckedList[Job.ID] = true
 			
 			JobCount[Egg] += 1 ; Egg:send(Job)
 		end
@@ -67,11 +70,12 @@ function SchedulerList:Queue(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
 	Egg:send(BevyRequest) ; NewList.BevyList = Egg:receive()
 end
 
-function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest): ()
+function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest, NestID: number): ()
 	if not ParallelJobCache[NewList] then
 		ParallelJobCache[NewList] = {}
 	end; local JobCount = ParallelJobCache[NewList]
 
+	local CheckedList: q.TypedList<number, boolean> = {}
 	local SubCache: {q.EggPacket<q.Parallel>} = {}
 
 	for Current,Egg in NewList.Nest do
@@ -85,13 +89,14 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 					continue
 				end
 
+				--This check is to prevent running the job without data assigned to the thread
 				if not Job.Data[Current] then
 					continue
 				end
 
 				if not table.find(SubCache, Job) then
 					table.insert(SubCache, Job)
-				end; Job.ThreadContext = Current
+				end; Job.ThreadContext = tonumber(tostring(NestID..Current))
 
 				PseudoPacket.Data = Job.Data[Current]
 				PseudoPacket.ThreadContext = Current
@@ -115,7 +120,12 @@ function SchedulerList:Parallel(NewList: q.BurrowType, BevyUpdate, BevyRequest):
 		if Job.RequestAmount == 0 then
 			Job.State = 2 ; continue
 		end
-		Job.RequestAmount = if Job.RequestAmount > 0 then Job.RequestAmount - 1 else -1
+
+		if not CheckedList[Job.ID] then
+			Job.RequestAmount = if Job.RequestAmount > 0 then Job.RequestAmount - 1 else -1
+		else
+			continue
+		end; CheckedList[Job.ID] = true
 	end
 
 end
