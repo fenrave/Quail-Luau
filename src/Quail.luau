@@ -1,11 +1,14 @@
 --!strict
 local q = require("./Types.Quail")
 local Schedulers = require("./Schedulers")
+local InitModule = require("./Initializers")
+local Initializers = InitModule.Initializers
+local Passer = InitModule.PassList 
 ----------------------------------------------------
 local Egg = zune.thread
 local Task = zune.task
 local RGEN: Random = zune.random.new()
-local Nest = {} :: q.Nest
+local Nest = {} :: q.Nest ; Passer(Nest)
 ----------------------------------------------------
 export type ModuleSetupDef = q.ModuleSetupDef
 export type EggDef<Def> = q.EggDef<Def>
@@ -44,8 +47,6 @@ type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
 local NumberCache: TypedList<number, number> = {}
-local ThreadCache: TypedList<number, Thread> = {}
-
 ----------------------------------------------------
 local function GenID(): number
 	local Number = RGEN:nextInteger(1000000000000, 9999999999999)
@@ -55,21 +56,6 @@ local function GenID(): number
 	end; table.insert(NumberCache, Number)
 
 	return Number
-end
-----------------------------------------------------
-for i = 1, Egg.getCpuCount() do
-	local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
-	table.insert(ThreadCache, NewEgg)
-end
-
-local function GetThreads(Count: number, ID: number): {Thread}
-	local ThreadTable: TypedList<number, Thread> = table.clone(ThreadCache)
-
-	for i: number = 1, #ThreadCache - Count do
-		table.remove(ThreadTable, math.random(1, #ThreadTable))
-	end
-	
-	return ThreadTable
 end
 ----------------------------------------------------
 local QuailHandle = {} :: q.QuailHandle
@@ -107,39 +93,49 @@ function Nest:Scheduler(): ()
 		for _, Routine in self.RoutineList do
 			Routine()
 		end; Task.wait(self.Timer)
+		
+		Initializers.Queue()
 	end
 end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
-function Nest:NewNest(EggAmount: number, SchedType: string?)
+function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
+	local InitType: string = "Default"
 	if SchedType == nil then
 		SchedType = "Queue"
 	end; assert(SchedType ~= nil)
 
-	type SchedType = index<SchedType, SchedType>
+	if CanAsync or SchedType == "Async" then
+		InitType = "Async"
+	end
+
+	EggAmount = math.clamp(EggAmount, 1, #Initializers.ThreadCache)
 
 	local NewList = {
 		Egg = nil :: any,
-		Nest = {},
+		Nest = {} :: any,
 		Clutch = {},
 		BevyList = {},
 		CurrentEgg = 1,
-		NestID = GenID()
+		NestID = GenID(),
+		SchedType = SchedType
 	} :: q.BurrowType
-
+	
 	NewList.InternalScheduler = Schedulers[SchedType]
 
-	NewList.Nest = GetThreads(EggAmount, NewList.NestID)
+	NewList.Nest = Initializers[InitType](Initializers, NewList, EggAmount, NewList.NestID)
 	NewList.Egg = NewList.Nest[1]
 
-	local BevyUpdate: q.EggPacket<q.Field> = {
+	NewList.BevyUpdate = {
 		Data = NewList.BevyList,
+		NestID = NewList.NestID,
 		ID = GenID(),
 		Name = "Sync",
 		RequestAmount = 0,
 		RequestType = q.RequestEnum[3]
 	}
 
-	local BevyRequest: q.EggPacket<nil> = {
+	NewList.BevyRequest = {
+		NestID = NewList.NestID,
 		ID = GenID(),
 		Name = "Request",
 		RequestAmount = 0,
@@ -147,7 +143,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	}
 
 	local function Internal(): ()
-		NewList.InternalScheduler(Schedulers, NewList, BevyUpdate, BevyRequest, NewList.NestID)
+		NewList.InternalScheduler(Schedulers, NewList, NewList.NestID)
 	end; table.insert(self.RoutineList, Internal)
 
 	function NewList:InitBevy(Name: string)
@@ -174,11 +170,12 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
 	end
 
-	function NewList:AssignJob(EggDef: q.EggDef<SchedType>): q.QuailHandle
+	function NewList:AssignJob(EggDef: q.EggDef<DataPacket>): q.QuailHandle
 
-		local NewPacket: q.EggPacket<SchedType> = {
+		local NewPacket: q.EggPacket<DataPacket> = {
 			Name = EggDef.ModuleName,
 			ID = GenID(),
+			NestID = NewList.NestID,
 			RequestType = if type(EggDef.Type) ~= "string" then
 					q.RequestEnum[EggDef.Type]
 				else
@@ -196,20 +193,26 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		return NewHandle
 	end
 
-	InternalList[#InternalList] = NewList
+	InternalList[NewList.NestID] = NewList
 
 	return NewList
 end
 
 function Nest:AddModule(pEgg: ModuleSetupDef): ()
 	local CurrentNest = pEgg.Nest
+	local Nest = CurrentNest.Nest
 
-	for i, Egg in CurrentNest.Nest do
+	if CurrentNest.SchedType == "Async" then
+		Nest = Nest.Threads
+	end
+
+	for i, Egg in Nest do
 		for Name, ModulePath in pEgg.Modules do
 
 			local NewPacket: q.EggPacket<q.ModulePacket> = {
 				Name = Name,
 				ID = GenID(),
+				NestID = CurrentNest.NestID,
 				RequestType = q.RequestEnum[1],
 				RequestAmount = 0 :: number,
 				Data = {

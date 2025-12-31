@@ -1,6 +1,9 @@
 local Nest = require("./src/Quail")
 
-local NewNest = Nest:NewNest(50, "Parallel") --Amount of threads in the pool
+local NewNest = Nest:NewNest(
+	12, --Amount of threads in the pool
+	"Parallel"
+) 
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
@@ -19,6 +22,12 @@ local Data: Nest.Parallel = {
 	[4] = {T = 10},
 	[5] = {T = 10},
 	[6] = {T = 10},
+	[7] = {T = 10},
+	[8] = {T = 10},
+	[9] = {T = 10},
+	[10] = {T = 10},
+	[11] = {T = 10},
+	[12] = {T = 10}
 }
 
 -- local Data: Nest.Queue = {
@@ -55,7 +64,7 @@ local Quail = NewNest:AssignJob(Def)
 ]==]--
 
 --PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
-NewNest:OnComplete(Quail.Handle, function(ReturnData)
-	Quail.Handle.Data.T = ReturnData.T
-	print(Quail.Handle.Data.T)
+NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
+	Quail.Handle.Data[ThreadContext].T = ReturnData.T
+	print(Quail.Handle.Data[ThreadContext].T)
 end)

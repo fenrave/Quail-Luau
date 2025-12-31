@@ -94,8 +94,9 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 		end; Field:SyncBevy(Packet)
 	end,
 
-	RequestSync = function()
-		m.send(Field:GetChanges())
+	RequestSync = function(Packet: q.EggPacket<any>)
+		Packet.Data = Field:GetChanges()
+		m.send(Packet)
 	end
 }
 

@@ -1,6 +1,7 @@
 --------------------------------------------
 export type EggPacket<Assignable> = {
 	Name: string,
+	NestID: number,
 	ID: number,
 	RequestType: string,
 	RequestAmount: number,
@@ -54,10 +55,36 @@ export type ModuleSetupDef = {
 export type SchedulerType = (
 	self: SchedulerList,
 	NewList: BurrowType,
-	BevyUpdate: EggPacket<Field>,
-	BevyRequest: EggPacket<nil>,
 	NestID: number
 ) -> ()
+
+export type InitializerType = (
+	self: Initializers,
+	Burrow: BurrowType,
+	Amount: number,
+	ID: number
+) -> TypedList<number, Thread> & AsyncHandler
+
+export type Indexer = {
+	ID: number
+}
+
+type Async = {
+	__newindex: (
+		List: Indexer,
+		Index: string | number,
+		Value: EggPacket<Parallel>
+	) -> ()
+}
+
+export type AsyncHandler = setmetatable<{
+		Threads: TypedList<number, Thread>,
+		CurrentJob: EggPacket<Parallel>?
+	} & Indexer,
+	Async
+>
+
+export type AsyncThread = setmetatable<Indexer,Async>
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
@@ -80,11 +107,16 @@ export type FieldTypes = {
 
 export type BurrowType = {
 	Egg: Thread,
-	Nest: TypedList<number, Thread>,
+	Nest: TypedList<number, Thread> & AsyncHandler,
 	CurrentEgg: number,
 	BevyList: Field,
 	InternalScheduler: SchedulerType,
 	NestID: number,
+	SchedType: string,
+
+	BevyUpdate: EggPacket<Field>,
+	BevyRequest: EggPacket<nil>,
+
 	AssignJob: (
 		self: BurrowType,
 		EggDef: EggDef<any>
@@ -114,7 +146,8 @@ export type Nest = {
 	NewNest: (
 		self: Nest,
 		EggAmount: number,
-		SchedType: string?
+		SchedType: string?,
+		CanAsync: boolean?
 	) -> BurrowType,
 
 	AddModule: (self: Nest, pEgg: ModuleSetupDef) -> (),
@@ -129,6 +162,16 @@ export type Nest = {
 
 	Timer: number,
 	EggList: EggList
+}
+
+export type Initializers = {
+	ThreadCache: TypedList<number, Thread>,
+	AsyncHandlers: TypedList<number, TypedList<number, AsyncHandler>>,
+	Receiver: (Thread: Thread) -> (),
+	PseudoPacket: EggPacket<Parallel>,
+	ReceiveQueue: {Thread},
+	Queue: (...any) -> (),
+	[string]: InitializerType
 }
 
 export type SchedulerList = TypedList<string, SchedulerType>
