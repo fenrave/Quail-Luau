@@ -65,6 +65,6 @@ local Quail = NewNest:AssignJob(Def)
 
 --PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
 NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
-	Quail.Handle.Data[ThreadContext].T = ReturnData.T
-	print(Quail.Handle.Data[ThreadContext].T)
+	Quail.Handle.Data.T = ReturnData.T
+	print(Quail.Handle.Data.T)
 end)

@@ -49,7 +49,7 @@ type EggPacket<Def> = q.EggPacket<Def>
 local NumberCache: TypedList<number, number> = {}
 ----------------------------------------------------
 local function GenID(): number
-	local Number = RGEN:nextInteger(1000000000000, 9999999999999)
+	local Number = RGEN:nextInteger(10000, 99999)
 
 	if table.find(NumberCache, Number) then
 		return GenID()
@@ -93,7 +93,6 @@ function Nest:Scheduler(): ()
 		for _, Routine in self.RoutineList do
 			Routine()
 		end; Task.wait(self.Timer)
-		
 		Initializers.Queue()
 	end
 end; Task.spawn(Nest.Scheduler, Nest)

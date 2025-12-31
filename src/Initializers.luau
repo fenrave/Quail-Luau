@@ -10,9 +10,9 @@ type TypedList<K, V> = q.TypedList<K, V>
 type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
-function Initializers.Receiver(Thread: Thread): ()
-	while true do
-		Thread = coroutine.yield()
+function Initializers.Receiver(): ()
+	while true do local Thread = coroutine.yield();
+
 		local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
 		local List = Nest.EggList[Received.NestID]
 
@@ -22,7 +22,7 @@ function Initializers.Receiver(Thread: Thread): ()
 			local ThreadContext = table.find(Initializers.ThreadCache, Thread)
 
 			if Callback then
-				Callback(Received.Data, ThreadContext) ; return
+				Callback(Received.Data, ThreadContext) ; continue
 			else
 				print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
 			end
@@ -30,17 +30,16 @@ function Initializers.Receiver(Thread: Thread): ()
 		elseif Received["RequestType"] == "RequestSync" then
 			List.BevyList = Received.Data
 		end
-		
 	end
 end
 
-local Receivers = {}
+local Receivers: {thread} = {}
 ----------------------------------------------------
 local function Queue(): ()
 	for _,Thread in Initializers.ReceiveQueue do
-		local ThreadContext: number = table.find(Initializers.ThreadCache, Thread) :: number
-		print(
-			coroutine.resume(Receivers[ThreadContext], Thread)
+		Task.spawn(
+			Receivers[table.find(Initializers.ThreadCache, Thread) :: number],
+			Thread
 		)
 	end; table.clear(Initializers.ReceiveQueue)
 end
@@ -66,8 +65,7 @@ for i = 1, Egg.getCpuCount() do
 	table.insert(Initializers.ThreadCache, NewEgg)
 
 	local Coro = coroutine.create(Initializers.Receiver)
-	table.insert(Receivers, Coro)
-	coroutine.resume(Coro)
+	coroutine.resume(Coro) ; table.insert(Receivers, Coro)
 end
 
 local function GetThreads(Count: number, ID: number): TypedList<number, Thread>
