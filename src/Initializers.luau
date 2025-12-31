@@ -1,8 +1,8 @@
 local q = require("./Types.Quail")
 ----------------------------------------------------
-local Task = zune.task
 local Egg = zune.thread
 local Nest: q.Nest
+local Task = zune.task
 ----------------------------------------------------
 local Initializers = {} :: q.Initializers
 ----------------------------------------------------
@@ -11,28 +11,37 @@ type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
 function Initializers.Receiver(Thread: Thread): ()
-	local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
-	local List = Nest.EggList[Received.NestID]
+	while true do
+		Thread = coroutine.yield()
+		local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
+		local List = Nest.EggList[Received.NestID]
 
-	if Received["RequestType"] == "Send" then
-		local Callback: (...any) -> () = List.Clutch[Received.Name].Callbacks[Received.ID]
+		if Received["RequestType"] == "Send" then
+			local Callback: (...any) -> () = List.Clutch[Received.Name].Callbacks[Received.ID]
 
-		local Thread = table.find(Initializers.ThreadCache, Thread)
+			local ThreadContext = table.find(Initializers.ThreadCache, Thread)
 
-		if Callback then
-			Callback(Received.Data, Thread) ; return
-		else
-			print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
+			if Callback then
+				Callback(Received.Data, ThreadContext) ; return
+			else
+				print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
+			end
+
+		elseif Received["RequestType"] == "RequestSync" then
+			List.BevyList = Received.Data
 		end
-
-	elseif Received["RequestType"] == "RequestSync" then
-		List.BevyList = Received.Data
+		
 	end
 end
+
+local Receivers = {}
 ----------------------------------------------------
 local function Queue(): ()
 	for _,Thread in Initializers.ReceiveQueue do
-		Initializers.Receiver(Thread)
+		local ThreadContext: number = table.find(Initializers.ThreadCache, Thread) :: number
+		print(
+			coroutine.resume(Receivers[ThreadContext], Thread)
+		)
 	end; table.clear(Initializers.ReceiveQueue)
 end
 ----------------------------------------------------
@@ -55,6 +64,10 @@ Initializers.Queue = Queue
 for i = 1, Egg.getCpuCount() do
 	local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
 	table.insert(Initializers.ThreadCache, NewEgg)
+
+	local Coro = coroutine.create(Initializers.Receiver)
+	table.insert(Receivers, Coro)
+	coroutine.resume(Coro)
 end
 
 local function GetThreads(Count: number, ID: number): TypedList<number, Thread>
