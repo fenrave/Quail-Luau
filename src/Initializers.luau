@@ -1,48 +1,115 @@
 local q = require("./Types.Quail")
+local Case = require("./extModules/case")
 ----------------------------------------------------
 local Egg = zune.thread
 local Nest: q.Nest
 local Task = zune.task
 ----------------------------------------------------
 local Initializers = {} :: q.Initializers
+local InactiveReceivers: {thread} = {}
+local ActiveReceivers: {thread} = {}
+local ThreadTables = {}
 ----------------------------------------------------
 type TypedList<K, V> = q.TypedList<K, V>
 type DataPacket = q.DataPacket
 type EggPacket<Def> = q.EggPacket<Def>
 ----------------------------------------------------
-function Initializers.Receiver(): ()
-	while true do local Thread = coroutine.yield();
-
-		local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
-		local List = Nest.EggList[Received.NestID]
-
-		if Received["RequestType"] == "Send" then
+Initializers.CoroutineCase = Case(
+	"ReceiverFunctions",
+	{
+		Send = function(List, Received, ThreadContext)
 			local Callback: (...any) -> () = List.Clutch[Received.Name].Callbacks[Received.ID]
-
-			local ThreadContext = table.find(Initializers.ThreadCache, Thread)
-
+			
 			if Callback then
-				Callback(Received.Data, ThreadContext) ; continue
-			else
-				print(`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`)
+				Callback(Received.Data, ThreadContext) ; return
 			end
 
-		elseif Received["RequestType"] == "RequestSync" then
+			print(
+				`Orphaned Data on... Module: {Received.Name}, ID: {Received.ID}`
+			)
+		end,
+		RequestSync = function(List, Received)
 			List.BevyList = Received.Data
+		end,
+		Default = function(...)
+			print(select(..., 2))
 		end
+	}
+)
+
+Initializers.QueueCase = Case(
+	"QueueCase",
+	{
+		suspended = function(Co: thread, Thread: Thread, Index: number)
+			Task.spawn(Co,Thread) ; table.remove(Initializers.ReceiveQueue, Index)
+		end,
+		dead = function(Co: thread, Thread: Thread, Index: number, Position: number)
+			local Coro = coroutine.create(Initializers.Receiver)
+			coroutine.resume(Coro, #InactiveReceivers, Coro) ; table.insert(InactiveReceivers, Coro)
+		end
+	}
+)
+
+function Initializers.Receiver(SelfIndex: number, thread: thread): ()
+	ThreadTables[thread] = {
+		Yielding = false
+	}
+	while true do local Thread = coroutine.yield()
+		ThreadTables[thread].Yielding = true
+		local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
+
+		Initializers.CoroutineCase[Received.RequestType](
+			Nest.EggList[Received.NestID],
+			Received,
+			table.find(Initializers.ThreadCache, Thread)
+		); Task.wait()
+
+		table.insert(InactiveReceivers, thread) ; table.remove(ActiveReceivers, SelfIndex)
+		ThreadTables[thread].Yielding = false
+	end
+end
+----------------------------------------------------
+local function Queue(): ()
+	for Index,Thread in Initializers.ReceiveQueue do
+		local Position = table.find(Initializers.ThreadCache, Thread) :: number
+		local Co = InactiveReceivers[Position]
+		if not Co or ThreadTables[Co].Yielding then
+			continue
+		end
+
+		table.insert(ActiveReceivers, Co)
+		table.remove(InactiveReceivers, Position)
+
+		local Status = coroutine.status(Co)
+
+		Initializers.QueueCase[Status](Co, Thread, Index, Position)
 	end
 end
 
-local Receivers: {thread} = {}
-----------------------------------------------------
-local function Queue(): ()
-	for _,Thread in Initializers.ReceiveQueue do
-		Task.spawn(
-			Receivers[table.find(Initializers.ThreadCache, Thread) :: number],
-			Thread
-		)
-	end; table.clear(Initializers.ReceiveQueue)
-end
+-- local function Queue(): ()
+-- 	repeat
+-- 		local Receiver = InactiveReceivers[1]
+-- 		if ThreadTables[Receiver].Yielding then
+-- 			table.remove(InactiveReceivers, 1)
+-- 			table.insert(ActiveReceivers, Receiver)
+-- 			continue
+-- 		end
+-- 			local NextQueue = Initializers.ReceiveQueue[1]
+-- 			if not NextQueue then
+-- 				break
+-- 			end
+
+-- 			table.remove(InactiveReceivers, 1)
+-- 			table.insert(ActiveReceivers, Receiver)
+
+-- 			Initializers.QueueCase[coroutine.status(Receiver)](
+-- 				Receiver,
+-- 				NextQueue,
+-- 				1
+-- 			)
+		
+-- 	until #InactiveReceivers <= 0 or #Initializers.ReceiveQueue <= 0
+-- end
 ----------------------------------------------------
 Initializers.PseudoPacket = {
 	Name = "Temp",
@@ -63,9 +130,11 @@ Initializers.Queue = Queue
 for i = 1, Egg.getCpuCount() do
 	local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
 	table.insert(Initializers.ThreadCache, NewEgg)
+end
 
+for i = 1,100 do
 	local Coro = coroutine.create(Initializers.Receiver)
-	coroutine.resume(Coro) ; table.insert(Receivers, Coro)
+	coroutine.resume(Coro, i, Coro) ; table.insert(InactiveReceivers, Coro)
 end
 
 local function GetThreads(Count: number, ID: number): TypedList<number, Thread>

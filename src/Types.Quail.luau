@@ -170,7 +170,13 @@ export type Initializers = {
 	Receiver: (Thread: Thread) -> (),
 	PseudoPacket: EggPacket<Parallel>,
 	ReceiveQueue: {Thread},
-	Queue: (...any) -> (),
+	Queue: () -> (),
+	CoroutineCase: {
+		[any]: (...any) -> ()
+	},
+	QueueCase: {
+		[any]: (...any) -> ()
+	},
 	[string]: InitializerType
 }
 

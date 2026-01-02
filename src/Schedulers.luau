@@ -42,7 +42,7 @@ function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()
 	local CheckedList: q.TypedList<number, boolean> = {}
 	local SubCache: q.TypedList<number, q.EggPacket<q.Parallel>> = {}
 
-	for Current,Egg in NewList.Nest do
+	for Current, Egg: Thread in NewList.Nest do
 		for _, Module in NewList.Clutch do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 then
@@ -67,10 +67,8 @@ function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()
 				Init.PseudoPacket.NestID = NestID
 				Init.PseudoPacket.Name = Job.Name
 				
-				Task.spawn(Egg.send, Egg, Init.PseudoPacket)
-
-				table.insert(Init.ReceiveQueue,Egg)
-					
+				Egg:send(Init.PseudoPacket)
+				table.insert(Init.ReceiveQueue, Egg)
 			end
 		end
 	end

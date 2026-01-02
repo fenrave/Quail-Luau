@@ -13,7 +13,7 @@ local Modules: Nest.ModuleSetupDef = {
 }
 
 Nest:AddModule(Modules)
-Nest.Timer = 1/240
+Nest.Timer = 1/600
 
 local Data: Nest.Parallel = {
 	[1] = {T = 10},
@@ -68,3 +68,5 @@ NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
 	Quail.Handle.Data.T = ReturnData.T
 	print(Quail.Handle.Data.T)
 end)
+
+Nest:Scheduler()

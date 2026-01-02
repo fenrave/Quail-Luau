@@ -93,9 +93,13 @@ function Nest:Scheduler(): ()
 		for _, Routine in self.RoutineList do
 			Routine()
 		end; Task.wait(self.Timer)
-		Initializers.Queue()
+
+		if #Initializers.ReceiveQueue > 0 then
+			Initializers.Queue()
+		end
+		
 	end
-end; Task.spawn(Nest.Scheduler, Nest)
+end; --Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
 function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
 	local InitType: string = "Default"
