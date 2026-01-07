@@ -1,3 +1,16 @@
+export type InternalCase = {
+    Default: any,
+    [any]: any | (...any) -> any
+}
+
+type MetaCase = {
+    __call: (Case: Case, Index: any, ...any?) -> ...any,
+    __add: (Case: Case, ...any) -> Case
+}
+------------------
+
+export type Case = setmetatable<InternalCase, MetaCase>
+
 --------------------------------------------
 export type EggPacket<Assignable> = {
 	Name: string,
@@ -89,7 +102,7 @@ export type AsyncThread = setmetatable<Indexer,Async>
 export type ClutchInterface = {
 	[string]: {
 		Jobs: TypedList<number, EggPacket<any>>,
-		Callbacks: TypedList<number, (...any)->()>
+		Callbacks: {TypedList<number, (...any)->()>}
 	}
 }
 
@@ -171,9 +184,8 @@ export type Initializers = {
 	PseudoPacket: EggPacket<Parallel>,
 	ReceiveQueue: {Thread},
 	Queue: () -> (),
-	CoroutineCase: {
-		[any]: (...any) -> ()
-	},
+	CoroutineCase: Case
+	,
 	QueueCase: {
 		[any]: (...any) -> ()
 	},

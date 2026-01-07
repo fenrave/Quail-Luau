@@ -1,7 +1,7 @@
 ------------------
 export type InternalCase = {
     Default: any,
-    [any]: any
+    [any]: any | (...any) -> any
 }
 
 type MetaCase = {

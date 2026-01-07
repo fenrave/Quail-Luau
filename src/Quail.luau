@@ -49,7 +49,7 @@ type EggPacket<Def> = q.EggPacket<Def>
 local NumberCache: TypedList<number, number> = {}
 ----------------------------------------------------
 local function GenID(): number
-	local Number = RGEN:nextInteger(10000, 99999)
+	local Number = RGEN:nextInteger(100000, 999999)
 
 	if table.find(NumberCache, Number) then
 		return GenID()
@@ -94,12 +94,12 @@ function Nest:Scheduler(): ()
 			Routine()
 		end; Task.wait(self.Timer)
 
-		if #Initializers.ReceiveQueue > 0 then
-			Initializers.Queue()
-		end
-		
+		-- if #Initializers.ReceiveQueue > 0 then
+		-- 	Initializers.Queue()
+		-- end
+
 	end
-end; --Task.spawn(Nest.Scheduler, Nest)
+end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
 function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
 	local InitType: string = "Default"
@@ -170,7 +170,13 @@ function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
 	end
 
 	function NewList:OnComplete(Handle, fn: <Type>(...Type) -> ()): ()
-		self.Clutch[Handle.Name].Callbacks[Handle.ID] = fn
+		local List = self.Clutch[Handle.Name].Callbacks
+
+		if not List[Handle.ID] then
+			List[Handle.ID] = {}
+		end
+
+		List[Handle.ID][GenID()] = fn
 	end
 
 	function NewList:AssignJob(EggDef: q.EggDef<DataPacket>): q.QuailHandle

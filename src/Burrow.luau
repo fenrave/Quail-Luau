@@ -67,6 +67,8 @@ function Field:GetChanges()
 end
 ----------------------------------------------------
 local ModuleTable = {}
+local ReceivedQueue: {q.EggPacket<any>} = {}
+local ToSendQueue: {q.EggPacket<any>} = {}
 
 local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 	Module = function(Packet: q.EggPacket<q.ModulePacket>)
@@ -85,7 +87,7 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 			Packet.Data, 
 			{Bevy = Field, Covy = Covy, ToggleFlush = ToggleCovyFlush}, 
 			Packet.ThreadContext
-		); m.send(Packet)
+		); table.insert(ToSendQueue, Packet)
 	end,
 
 	Sync = function(Packet: q.EggPacket<any>)
@@ -95,14 +97,32 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 	end,
 
 	RequestSync = function(Packet: q.EggPacket<any>)
-		Packet.Data = Field:GetChanges()
-		m.send(Packet)
+		Packet.Data = Field:GetChanges() ; table.insert(ToSendQueue, Packet)
 	end
 }
+
+local function SendQueueHandler(): ()
+	while true do coroutine.yield()
+		while #ReceivedQueue > 0 do
+			local Packet = ReceivedQueue[1] ; table.remove(ReceivedQueue, 1)
+			PacketCase[Packet.RequestType](Packet)
+		end
+	end
+end
+
+local Handler = coroutine.create(SendQueueHandler) ; coroutine.resume(Handler)
 
 local function Main(): ()
 	while true do
 		local Packet: q.EggPacket<any> = m.receive()
-		task.spawn(PacketCase[Packet.RequestType], Packet)
+		table.insert(ReceivedQueue, Packet)
+
+		if coroutine.status(Handler) == "suspended" then
+			task.spawn(Handler)
+		end
+
+		for Index: number, nPacket in ToSendQueue do
+			m.send(nPacket)
+		end; table.clear(ToSendQueue)
 	end
 end; Main()
