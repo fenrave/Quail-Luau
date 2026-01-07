@@ -76,28 +76,13 @@ export type InitializerType = (
 	Burrow: BurrowType,
 	Amount: number,
 	ID: number
-) -> TypedList<number, Thread> & AsyncHandler
+) -> TypedList<number, Thread> 
 
 export type Indexer = {
 	ID: number
 }
 
-type Async = {
-	__newindex: (
-		List: Indexer,
-		Index: string | number,
-		Value: EggPacket<Parallel>
-	) -> ()
-}
 
-export type AsyncHandler = setmetatable<{
-		Threads: TypedList<number, Thread>,
-		CurrentJob: EggPacket<Parallel>?
-	} & Indexer,
-	Async
->
-
-export type AsyncThread = setmetatable<Indexer,Async>
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
@@ -120,7 +105,7 @@ export type FieldTypes = {
 
 export type BurrowType = {
 	Egg: Thread,
-	Nest: TypedList<number, Thread> & AsyncHandler,
+	Nest: TypedList<number, Thread>,
 	CurrentEgg: number,
 	BevyList: Field,
 	InternalScheduler: SchedulerType,
@@ -179,16 +164,12 @@ export type Nest = {
 
 export type Initializers = {
 	ThreadCache: TypedList<number, Thread>,
-	AsyncHandlers: TypedList<number, TypedList<number, AsyncHandler>>,
 	Receiver: (Thread: Thread) -> (),
 	PseudoPacket: EggPacket<Parallel>,
 	ReceiveQueue: {Thread},
 	Queue: () -> (),
-	CoroutineCase: Case
-	,
-	QueueCase: {
-		[any]: (...any) -> ()
-	},
+	CoroutineCase: Case,
+	QueueCase: Case,
 	[string]: InitializerType
 }
 

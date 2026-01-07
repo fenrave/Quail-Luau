@@ -1,38 +1,42 @@
-local Nest = require("./src/Quail")
-
+----------------------------------------
+local Nest = require("../src/Quail")
+local Test = zune.testing
+----------------------------------------
 local NewNest = Nest:NewNest(
-	12 --Amount of threads in the pool
-	-- "Parallel"
+	12, --Amount of threads in the pool
+	"Parallel"
 ) 
+
+-- local t = require("./testmodules/test")
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
 	Modules = {
-		["Test"] = "./example/test"
+		["Test"] = "./testmodules/test"
 	}
 }
 
 Nest:AddModule(Modules)
-Nest.Timer = 1/5
+Nest.Timer = 1/240
 
--- local Data: Nest.Parallel = {
--- 	[1] = {T = 10},
--- 	[2] = {T = 10},
--- 	[3] = {T = 10},
--- 	[4] = {T = 10},
--- 	[5] = {T = 10},
--- 	[6] = {T = 10},
--- 	[7] = {T = 10},
--- 	[8] = {T = 10},
--- 	[9] = {T = 10},
--- 	[10] = {T = 10},
--- 	[11] = {T = 10},
--- 	[12] = {T = 10}
--- }
-
-local Data: Nest.Queue = {
-	T = 1
+local Data: Nest.Parallel = {
+	[1] = {T = 10},
+	[2] = {T = 10},
+	[3] = {T = 10},
+	[4] = {T = 10},
+	[5] = {T = 10},
+	[6] = {T = 10},
+	[7] = {T = 10},
+	[8] = {T = 10},
+	[9] = {T = 10},
+	[10] = {T = 10},
+	[11] = {T = 10},
+	[12] = {T = 10}
 }
+
+-- local Data: Nest.Queue = {
+-- 	T = 1
+-- }
 
 local Bevy = NewNest:InitBevy("Test")
 

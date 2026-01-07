@@ -71,14 +71,12 @@ local ReceivedQueue: {q.EggPacket<any>} = {}
 local ToSendQueue: {q.EggPacket<any>} = {}
 
 local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
-	Module = function(Packet: q.EggPacket<q.ModulePacket>)
-		local ModulePath = Packet.Data.Path
-		
+	Module = function(Packet: q.EggPacket<q.ModulePacket>)		
 		if not ModuleTable[Packet.Name] then
 			ModuleTable[Packet.Name] = {}
 		end
 
-		ModuleTable[Packet.Name] = require(ModulePath) :: any
+		ModuleTable[Packet.Name] = require(Packet.Data.Path) :: any
 	end,
 
 	Send = function(Packet: q.EggPacket<q.DataPacket>)
@@ -103,10 +101,11 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 
 local function SendQueueHandler(): ()
 	while true do coroutine.yield()
-		while #ReceivedQueue > 0 do
-			local Packet = ReceivedQueue[1] ; table.remove(ReceivedQueue, 1)
+		repeat
+			local Packet = ReceivedQueue[1]
+			table.remove(ReceivedQueue, 1)
 			PacketCase[Packet.RequestType](Packet)
-		end
+		until #ReceivedQueue == 0
 	end
 end
 

@@ -33,13 +33,11 @@ Initializers.CoroutineCase = Case(
 Initializers.QueueCase = Case(
 	"QueueCase",
 	{
-		suspended = function(Co: thread, Thread: Thread)
-			Task.spawn(Co,Thread)
+		suspended = function(Co: thread)
+			Task.spawn(Co)
 		end,
-
-		dead = function(Co: thread, Thread: Thread)
-			local Coro = coroutine.create(Initializers.Receiver) ; table.remove(Receivers, 1)
-			Task.spawn(Coro, 1, Coro) ; table.insert(Receivers, Coro)
+		Default = function()
+			return
 		end
 	}
 )
@@ -48,30 +46,35 @@ function Initializers.Receiver(SelfIndex: number, thread: thread, Thread: Thread
 	ThreadTables[thread] = {
 		Yielding = false
 	}
-	while true do --local Thread = coroutine.yield()
-		ThreadTables[thread].Yielding = true
-		local Received: q.EggPacket<q.CompletedPacket> & q.Field = Thread:receive()
+	while true do coroutine.yield()
+		repeat
+			ThreadTables[thread].Yielding = true
+			local Received: q.EggPacket<q.CompletedPacket> = Thread:receive()
+			
+			table.remove(
+				Initializers.ReceiveQueue,
+				table.find(
+					Initializers.ReceiveQueue,
+					Thread
+				)
+			)
 
-		Initializers.CoroutineCase(
-			Received.RequestType,
-			Nest.EggList[Received.NestID],
-			Received
-		)
-
-		ThreadTables[thread].Yielding = false
+			Initializers.CoroutineCase(
+				Received.RequestType,
+				Nest.EggList[Received.NestID],
+				Received
+			)
+			ThreadTables[thread].Yielding = false
+		until #Initializers.ReceiveQueue == 0
 	end
 end
 ----------------------------------------------------
 local function Queue(): ()
-	for Index, Thread in Initializers.ReceiveQueue do
-		local Co = Receivers[1]
-		if ThreadTables[Co].Yielding then
+	for _,Receiver in Receivers do
+		if ThreadTables[Receiver].Yielding then
 			continue
 		end
-		
-		local Status = coroutine.status(Co)
-
-		Initializers.QueueCase[Status](Co, Thread)
+		Initializers.QueueCase(coroutine.status(Receiver), Receiver)
 	end
 end
 ----------------------------------------------------
@@ -87,7 +90,6 @@ Initializers.PseudoPacket = {
 }
 ----------------------------------------------------
 Initializers.ThreadCache = {}
-Initializers.AsyncHandlers = {}
 Initializers.ReceiveQueue = {}
 Initializers.Queue = Queue
 ----------------------------------------------------

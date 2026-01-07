@@ -94,22 +94,17 @@ function Nest:Scheduler(): ()
 			Routine()
 		end; Task.wait(self.Timer)
 
-		-- if #Initializers.ReceiveQueue > 0 then
-		-- 	Initializers.Queue()
-		-- end
+		if #Initializers.ReceiveQueue > 0 then
+			Initializers.Queue()
+		end
 
 	end
 end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
-function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
-	local InitType: string = "Default"
+function Nest:NewNest(EggAmount: number, SchedType: string?)
 	if SchedType == nil then
 		SchedType = "Queue"
 	end; assert(SchedType ~= nil)
-
-	if CanAsync or SchedType == "Async" then
-		InitType = "Async"
-	end
 
 	EggAmount = math.clamp(EggAmount, 1, #Initializers.ThreadCache)
 
@@ -125,7 +120,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?, CanAsync: boolean?)
 	
 	NewList.InternalScheduler = Schedulers[SchedType]
 
-	NewList.Nest = Initializers[InitType](Initializers, NewList, EggAmount, NewList.NestID)
+	NewList.Nest = Initializers["Default"](Initializers, NewList, EggAmount, NewList.NestID)
 	NewList.Egg = NewList.Nest[1]
 
 	NewList.BevyUpdate = {
@@ -210,10 +205,6 @@ end
 function Nest:AddModule(pEgg: ModuleSetupDef): ()
 	local CurrentNest = pEgg.Nest
 	local Nest = CurrentNest.Nest
-
-	if CurrentNest.SchedType == "Async" then
-		Nest = Nest.Threads
-	end
 
 	for i, Egg in Nest do
 		for Name, ModulePath in pEgg.Modules do
