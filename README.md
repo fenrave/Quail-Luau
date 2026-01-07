@@ -3,6 +3,8 @@
 
 ## **Quail-Luau**
 
+<sub>Known issue with IO_URING backend, which causes Zune to context switch to a single core. Use environment variable `ZUNE_ASYNC_BACKEND=epoll` if on Linux, which should properly handle it for now. <sub>
+
 <sub>***WIP, First Draft***<sub>
 
 The purpose of this project is to easily create Thread Queues via the Zune Runtime's Thread library.
