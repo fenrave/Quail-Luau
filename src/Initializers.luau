@@ -6,7 +6,7 @@ local Nest: q.Nest
 local Task = zune.task
 ----------------------------------------------------
 local Initializers = {} :: q.Initializers
-local Receivers: {thread} = {}
+local Receivers: TypedList<number, thread> = {}
 local ThreadTables = {}
 ----------------------------------------------------
 type TypedList<K, V> = q.TypedList<K, V>

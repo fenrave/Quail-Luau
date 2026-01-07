@@ -27,11 +27,7 @@ local function NewCase(Name: string, Options: InternalCase): Case
         {
             __call = function(Case: Case, Index: any, ...: any): ...any
                 if not Case[Index] then
-                    if ... then
-                        return Case[Index](...)
-                    else
-                        return Case[Index]
-                    end
+                    Index = "Default"
                 end
 
                 if ... then

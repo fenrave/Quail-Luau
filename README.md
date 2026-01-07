@@ -20,28 +20,48 @@ Long term goals are to implement differing kinds of ThreadPool back-ends & to im
 *Usage Example*
 
 ```luau
-local Nest = require("@Nest") --Assuming aliased, if not, path directly
-
-local NewNest = Nest:NewNest(5) --Amount of threads in the pool/queue
+----------------------------------------
+local Nest = require("@Quail")
+----------------------------------------
+local NewNest = Nest:NewNest(
+	12, --Amount of threads in the pool
+	"Parallel" --Queue, Parallel
+) 
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
 	Modules = {
-		["Test"] = "./example/test"
+		["Test"] = "./testmodules/test" --path relative from main /src/
 	}
 }
 
 Nest:AddModule(Modules)
+Nest.Timer = 1/240
 
-local num: number = 5
+local Data: Nest.Parallel = {
+	[1] = {T = 10},
+	[2] = {T = 10},
+	[3] = {T = 10},
+	[4] = {T = 10},
+	[5] = {T = 10},
+	[6] = {T = 10},
+	[7] = {T = 10},
+	[8] = {T = 10},
+	[9] = {T = 10},
+	[10] = {T = 10},
+	[11] = {T = 10},
+	[12] = {T = 10}
+}
 
-local Data: Nest.Dict = { T = num }
+-- local Data: Nest.Queue = {
+-- 	T = 1
+-- }
 
 local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
 
-local Def: Nest.EggDef<typeof(Data)> = {
+local Def: Nest.EggDef<Nest.Queue> = {
 	ModuleName = "Test",
 	--Name of initialized module in nest, so the packet knows where to go
 
@@ -67,9 +87,13 @@ local Quail = NewNest:AssignJob(Def)
 ]==]--
 
 --PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
-NewNest:OnComplete(Quail.Handle, function(ReturnData)
+NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
 	Quail.Handle.Data.T = ReturnData.T
 	print(Quail.Handle.Data.T)
+end)
+
+NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
+	print("AAAA")
 end)
 ```
 
