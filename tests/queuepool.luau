@@ -26,9 +26,13 @@ local function QueueTest()
 
 	local QueueHandler = queue:AssignJob(queue_def)
 	queue:OnComplete(QueueHandler.Handle, function(...)
-		print("Queue \n",...)
+		-- print("Queue \n",...)
 	end)
 
 end
 
-Test.test("Multiple Pools", QueueTest)
+if Test.running then
+	Test.test("Multiple Pools", QueueTest)
+else
+	QueueTest()
+end

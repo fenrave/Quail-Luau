@@ -9,7 +9,7 @@ local function MultiPoolTest()
 	)
 
 	local parallel = Nest:NewNest(
-		12,
+		3,
 		"Parallel"
 	)
 
@@ -70,5 +70,8 @@ local function MultiPoolTest()
 
 end
 
-
-Test.test("Multiple Pools", MultiPoolTest)
+if Test.running then
+	Test.test("Multiple Pools", MultiPoolTest)
+else
+	MultiPoolTest()
+end

@@ -44,4 +44,8 @@ local function ParallelTest()
 end
 
 
-Test.test("Multiple Pools", ParallelTest, 10.00000991)
+if Test.running then
+	Test.test("Multiple Pools", ParallelTest)
+else
+	ParallelTest()
+end
