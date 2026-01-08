@@ -33,7 +33,6 @@ local function ParallelTest()
 	local parallel_def: Nest.EggDef<typeof(workdef_parallel)> = {
 		ModuleName = "Test",
 		Limit = -1,
-		Type = "Send",
 		Data = workdef_parallel
 	}
 

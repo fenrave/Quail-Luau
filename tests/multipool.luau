@@ -49,14 +49,12 @@ local function MultiPoolTest()
 	local queue_def: Nest.EggDef<typeof(workdef_queue)> = {
 		ModuleName = "Test",
 		Limit = -1,
-		Type = "Send",
 		Data = workdef_queue
 	}
 
 	local parallel_def: Nest.EggDef<typeof(workdef_parallel)> = {
 		ModuleName = "Test",
 		Limit = -1,
-		Type = "Send",
 		Data = workdef_parallel
 	}
 

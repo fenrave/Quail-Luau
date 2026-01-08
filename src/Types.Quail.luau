@@ -26,7 +26,6 @@ export type EggPacket<Assignable> = {
 export type EggDef<Type> = {
 	ModuleName: string,
 	Limit: number,
-	Type: string,
 	Data: Type
 }
 --------------------------------------------
@@ -175,10 +174,10 @@ export type Initializers = {
 export type SchedulerList = TypedList<string, SchedulerType>
 --------------------------------------------
 local RequestEnum: TypedList<number, string> = {
-	[1] = "Module",
-	[2] = "Send",
-	[3] = "Sync",
-	[4] = "RequestSync"
+	[1] = "MODULE",
+	[2] = "SEND",
+	[3] = "SYNC",
+	[4] = "REQUESTSYNC"
 }
 --------------------------------------------
 return {RequestEnum = RequestEnum}

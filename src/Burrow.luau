@@ -71,7 +71,7 @@ local ReceivedQueue: {q.EggPacket<any>} = {}
 local ToSendQueue: {q.EggPacket<any>} = {}
 
 local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
-	Module = function(Packet: q.EggPacket<q.ModulePacket>)		
+	MODULE = function(Packet: q.EggPacket<q.ModulePacket>)		
 		if not ModuleTable[Packet.Name] then
 			ModuleTable[Packet.Name] = {}
 		end
@@ -79,7 +79,7 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 		ModuleTable[Packet.Name] = require(Packet.Data.Path) :: any
 	end,
 
-	Send = function(Packet: q.EggPacket<q.DataPacket>)
+	SEND = function(Packet: q.EggPacket<q.DataPacket>)
 		ThreadContext = Packet.ThreadContext :: number
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
@@ -88,13 +88,13 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 		); table.insert(ToSendQueue, Packet)
 	end,
 
-	Sync = function(Packet: q.EggPacket<any>)
+	SYNC = function(Packet: q.EggPacket<any>)
 		if DoFlush then
 			Covy:flush()
 		end; Field:SyncBevy(Packet)
 	end,
 
-	RequestSync = function(Packet: q.EggPacket<any>)
+	REQUESTSYNC = function(Packet: q.EggPacket<any>)
 		Packet.Data = Field:GetChanges() ; table.insert(ToSendQueue, Packet)
 	end
 }

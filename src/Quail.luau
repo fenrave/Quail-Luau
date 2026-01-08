@@ -127,7 +127,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		Data = NewList.BevyList,
 		NestID = NewList.NestID,
 		ID = GenID(),
-		Name = "Sync",
+		Name = "BEVYSYNC",
 		RequestAmount = 0,
 		RequestType = q.RequestEnum[3]
 	}
@@ -135,7 +135,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	NewList.BevyRequest = {
 		NestID = NewList.NestID,
 		ID = GenID(),
-		Name = "Request",
+		Name = "BEVYREQUEST",
 		RequestAmount = 0,
 		RequestType = q.RequestEnum[4]
 	}
@@ -179,15 +179,13 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 			Name = EggDef.ModuleName,
 			ID = GenID(),
 			NestID = NewList.NestID,
-			RequestType = if type(EggDef.Type) ~= "string" then
-					q.RequestEnum[EggDef.Type]
-				else
-					EggDef.Type,
+			RequestType = q.RequestEnum[2],
 			RequestAmount = EggDef.Limit or -1,
 			Data = EggDef.Data,
 			State = 0,
 			ThreadContext = 0
 		}
+		NewPacket.RequestType = string.upper(NewPacket.RequestType)
 
 		if not NewList.Clutch[EggDef.ModuleName] then
 			error("Module wasn't loaded, or failed to load before assignment.")
@@ -216,7 +214,7 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 				Name = Name,
 				ID = GenID(),
 				NestID = CurrentNest.NestID,
-				RequestType = q.RequestEnum[1],
+				RequestType = string.upper(q.RequestEnum[1]),
 				RequestAmount = 0 :: number,
 				Data = {
 					Path = ModulePath

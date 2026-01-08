@@ -21,7 +21,6 @@ local function QueueTest()
 	local queue_def: Nest.EggDef<typeof(workdef_queue)> = {
 		ModuleName = "Test",
 		Limit = -1,
-		Type = "Send",
 		Data = workdef_queue
 	}
 

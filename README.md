@@ -69,10 +69,6 @@ local Def: Nest.EggDef<Nest.Queue> = {
 	--The amount of times the callback will be called.
 	--If desired, -1 will allow it to run indefinitely.
 
-	Type = "Send",
-	--List of request types in module under Enums
-	--Should only use Send for jobs
-
 	Data = Data
 	--The module will be passed this as an arg, so put whatever you want into here
 }

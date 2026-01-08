@@ -66,10 +66,6 @@ local Def1: Nest.EggDef<Nest.Parallel> = {
 	--The amount of times the callback will be called.
 	--If desired, -1 will allow it to run indefinitely.
 
-	Type = "Send",
-	--List of request types in module under Enums
-	--Should only use Send for jobs
-
 	Data = Data1
 	--The module will be passed this as an arg, so put whatever you want into here
 }

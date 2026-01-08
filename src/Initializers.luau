@@ -16,12 +16,12 @@ type EggPacket<Def> = q.EggPacket<Def>
 Initializers.CoroutineCase = Case(
 	"ReceiverFunctions",
 	{
-		Send = function(List: q.BurrowType, Received: EggPacket<any>, ThreadContext)
+		SEND = function(List: q.BurrowType, Received: EggPacket<any>, ThreadContext)
 			for _, Callback in List.Clutch[Received.Name].Callbacks[Received.ID] do
 				Callback(Received.Data, ThreadContext)
 			end
 		end,
-		RequestSync = function(List, Received)
+		REQUESTSYNC = function(List, Received)
 			List.BevyList = Received.Data
 		end,
 		Default = function(...)
@@ -83,7 +83,7 @@ Initializers.PseudoPacket = {
 	Name = "Temp",
 	ID = 1,
 	NestID = 0,
-	RequestType = "Send",
+	RequestType = "SEND",
 	RequestAmount = -1,
 	Data = {},
 	State = 0,
