@@ -1,0 +1,76 @@
+local Nest = require("../src/Quail")
+local Test = zune.testing
+
+
+local function MultiPoolTest()
+	local queue = Nest:NewNest(
+		8,
+		"Queue"
+	)
+
+	local parallel = Nest:NewNest(
+		12,
+		"Parallel"
+	)
+
+	local qmodule: Nest.ModuleSetupDef = {
+		Nest = queue,
+		Modules = {
+			["Test"] = "./testmodules/test"
+		}
+	}; Nest:AddModule(qmodule)
+
+	local pmodules: Nest.ModuleSetupDef = {
+		Nest = parallel,
+		Modules = {
+			["Test"] = "./testmodules/test"
+		}
+	}; Nest:AddModule(pmodules)
+
+	local workdef_queue: Nest.Queue = {
+		T = 50
+	}
+
+	local workdef_parallel: Nest.Parallel = {
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20},
+		{T = 20}
+	}
+
+	local queue_def: Nest.EggDef<typeof(workdef_queue)> = {
+		ModuleName = "Test",
+		Limit = -1,
+		Type = "Send",
+		Data = workdef_queue
+	}
+
+	local parallel_def: Nest.EggDef<typeof(workdef_parallel)> = {
+		ModuleName = "Test",
+		Limit = -1,
+		Type = "Send",
+		Data = workdef_parallel
+	}
+
+	local QueueHandler = queue:AssignJob(queue_def)
+	queue:OnComplete(QueueHandler.Handle, function(...)
+		print("Queue \n",...)
+	end)
+
+	local ParallelHandler = parallel:AssignJob(parallel_def)
+	parallel:OnComplete(ParallelHandler.Handle, function(...)
+		print("Parallel \n",...)
+	end)
+
+end
+
+
+Test.test("Multiple Pools", MultiPoolTest)

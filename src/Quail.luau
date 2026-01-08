@@ -175,7 +175,6 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	end
 
 	function NewList:AssignJob(EggDef: q.EggDef<DataPacket>): q.QuailHandle
-
 		local NewPacket: q.EggPacket<DataPacket> = {
 			Name = EggDef.ModuleName,
 			ID = GenID(),
@@ -189,6 +188,10 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 			State = 0,
 			ThreadContext = 0
 		}
+
+		if not NewList.Clutch[EggDef.ModuleName] then
+			error("Module wasn't loaded, or failed to load before assignment.")
+		end
 
 		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: EggPacket<any>
 

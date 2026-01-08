@@ -7,7 +7,7 @@ type MetaCase = {
     __call: (Case: Case, Index: any, ...any?) -> ...any,
     __add: (Case: Case, ...any) -> Case
 }
-------------------
+--------------------------------------------
 
 export type Case = setmetatable<InternalCase, MetaCase>
 
@@ -81,7 +81,6 @@ export type InitializerType = (
 export type Indexer = {
 	ID: number
 }
-
 
 --------------------------------------------
 export type ClutchInterface = {
