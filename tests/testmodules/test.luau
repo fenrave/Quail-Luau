@@ -1,4 +1,4 @@
-local QuailTypes = require("../Types.Quail")
+local QuailTypes = require("../../src/Types.Quail")
 
 type Data = {
     T: number

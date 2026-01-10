@@ -10,7 +10,7 @@ local function QueueTest()
 	local qmodule: Nest.ModuleSetupDef = {
 		Nest = queue,
 		Modules = {
-			["Test"] = "./testmodules/test"
+			["Test"] = "../tests/testmodules/test"
 		}
 	}; Nest:AddModule(qmodule)
 
@@ -18,7 +18,7 @@ local function QueueTest()
 		T = 50
 	}
 
-	local queue_def: Nest.EggDef<typeof(workdef_queue)> = {
+	local queue_def: Nest.ThreadDef<typeof(workdef_queue)> = {
 		ModuleName = "Test",
 		Limit = -1,
 		Data = workdef_queue
@@ -26,7 +26,7 @@ local function QueueTest()
 
 	local QueueHandler = queue:AssignJob(queue_def)
 	queue:OnComplete(QueueHandler.Handle, function(...)
-		-- print("Queue \n",...)
+		print("Queue \n",...)
 	end)
 
 end

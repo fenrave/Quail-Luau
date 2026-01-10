@@ -50,7 +50,7 @@ function Field.Get(Name, Meta)
 	return Bevy :: q.Dict
 end
 
-function Field:SyncBevy(Packet: q.EggPacket<Bevy>)
+function Field:SyncBevy(Packet: q.ThreadPacket<Bevy>)
 	for Index,Value in Packet.Data do
 		if not BevyList.Flock[ThreadContext] then
 			BevyList.Flock[ThreadContext] = {}
@@ -67,11 +67,11 @@ function Field:GetChanges()
 end
 ----------------------------------------------------
 local ModuleTable = {}
-local ReceivedQueue: {q.EggPacket<any>} = {}
-local ToSendQueue: {q.EggPacket<any>} = {}
+local ReceivedQueue: {q.ThreadPacket<any>} = {}
+local ToSendQueue: {q.ThreadPacket<any>} = {}
 
-local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
-	MODULE = function(Packet: q.EggPacket<q.ModulePacket>)		
+local PacketCase: q.TypedList<string, (Packet: q.ThreadPacket<any>) -> ()> = {
+	MODULE = function(Packet: q.ThreadPacket<q.ModulePacket>)		
 		if not ModuleTable[Packet.Name] then
 			ModuleTable[Packet.Name] = {}
 		end
@@ -79,7 +79,7 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 		ModuleTable[Packet.Name] = require(Packet.Data.Path) :: any
 	end,
 
-	SEND = function(Packet: q.EggPacket<q.DataPacket>)
+	SEND = function(Packet: q.ThreadPacket<q.DataPacket>)
 		ThreadContext = Packet.ThreadContext :: number
 		Packet.Data = ModuleTable[Packet.Name](
 			Packet.Data, 
@@ -88,13 +88,13 @@ local PacketCase: q.TypedList<string, (Packet: q.EggPacket<any>) -> ()> = {
 		); table.insert(ToSendQueue, Packet)
 	end,
 
-	SYNC = function(Packet: q.EggPacket<any>)
+	SYNC = function(Packet: q.ThreadPacket<any>)
 		if DoFlush then
 			Covy:flush()
 		end; Field:SyncBevy(Packet)
 	end,
 
-	REQUESTSYNC = function(Packet: q.EggPacket<any>)
+	REQUESTSYNC = function(Packet: q.ThreadPacket<any>)
 		Packet.Data = Field:GetChanges() ; table.insert(ToSendQueue, Packet)
 	end
 }
@@ -112,7 +112,7 @@ local Handler = coroutine.create(SendQueueHandler) ; coroutine.resume(Handler)
 
 local function Main(): ()
 	while true do
-		local Packet: q.EggPacket<any> = m.receive()
+		local Packet: q.ThreadPacket<any> = m.receive()
 		table.insert(ReceivedQueue, Packet)
 
 		if coroutine.status(Handler) == "suspended" then

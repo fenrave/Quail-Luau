@@ -12,7 +12,7 @@ type MetaCase = {
 export type Case = setmetatable<InternalCase, MetaCase>
 
 --------------------------------------------
-export type EggPacket<Assignable> = {
+export type ThreadPacket<Assignable> = {
 	Name: string,
 	NestID: number,
 	ID: number,
@@ -23,7 +23,7 @@ export type EggPacket<Assignable> = {
 	ThreadContext: number?
 }
 
-export type EggDef<Type> = {
+export type ThreadDef<Type> = {
 	ModuleName: string,
 	Limit: number,
 	Data: Type
@@ -84,18 +84,18 @@ export type Indexer = {
 --------------------------------------------
 export type ClutchInterface = {
 	[string]: {
-		Jobs: TypedList<number, EggPacket<any>>,
+		Jobs: TypedList<number, ThreadPacket<any>>,
 		Callbacks: {TypedList<number, (...any)->()>}
 	}
 }
 
-export type EggList = TypedList<number, BurrowType>
+export type NestList = TypedList<number, BurrowType>
 --------------------------------------------
 export type FieldTypes = {
 	Get: (Name: string, Meta: boolean?) -> Dict,
 	SyncBevy: (
 		self: FieldTypes,
-		Packet: EggPacket<Field>
+		Packet: ThreadPacket<Field>
 	) -> (),
 
 	GetChanges: (self: FieldTypes) -> Field
@@ -110,17 +110,17 @@ export type BurrowType = {
 	NestID: number,
 	SchedType: string,
 
-	BevyUpdate: EggPacket<Field>,
-	BevyRequest: EggPacket<nil>,
+	BevyUpdate: ThreadPacket<Field>,
+	BevyRequest: ThreadPacket<nil>,
 
 	AssignJob: (
 		self: BurrowType,
-		EggDef: EggDef<any>
+		EggDef: ThreadDef<any>
 	) -> QuailHandle,
 
 	OnComplete: (
 		self: BurrowType,
-		Handle: EggPacket<any>,
+		Handle: ThreadPacket<any>,
 		fn: <Type>(...Type) -> ()
 	) -> (),
 
@@ -135,39 +135,41 @@ export type QuailHandle = {
 	Disable: (self: QuailHandle) -> (),
 	Enable: (self: QuailHandle) -> (),
 
-	Handle: EggPacket<any>
+	Handle: ThreadPacket<any>
 }
 
-export type Nest = {
+export type Quail = {
 	NewNest: (
-		self: Nest,
-		EggAmount: number,
+		self: Quail,
+		ThreadAmount: number,
 		SchedType: string?,
 		CanAsync: boolean?
 	) -> BurrowType,
 
-	AddModule: (self: Nest, pEgg: ModuleSetupDef) -> (),
-	RemoveModule: (self: Nest, Name: string) -> (),
+	AddModule: (self: Quail, pEgg: ModuleSetupDef) -> (),
+	RemoveModule: (self: Quail, Name: string) -> (),
 
-	Scheduler: (self: Nest) -> (),
+	Scheduler: (self: Quail) -> (),
 	RoutineList: TypedList<number, () -> ()>,
 
-	ToggleScheduler: (self: Nest) -> (),
+	ToggleScheduler: (self: Quail) -> (),
 
 	NoInternalSchedule: boolean,
 
+	ThreadLimit: number,
 	Timer: number,
-	EggList: EggList
+	NestList: NestList
 }
 
 export type Initializers = {
 	ThreadCache: TypedList<number, Thread>,
 	Receiver: (Thread: Thread) -> (),
-	PseudoPacket: EggPacket<Parallel>,
+	PseudoPacket: ThreadPacket<Parallel>,
 	ReceiveQueue: {Thread},
 	Queue: () -> (),
 	CoroutineCase: Case,
 	QueueCase: Case,
+	Setup: (number) -> (),
 	[string]: InitializerType
 }
 

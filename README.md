@@ -21,24 +21,24 @@ Long term goals are to implement differing kinds of ThreadPool back-ends & to im
 
 ```luau
 ----------------------------------------
-local Nest = require("@Quail")
+local Quail = require("@Quail")
 ----------------------------------------
-local NewNest = Nest:NewNest(
+local NewNest = Quail:NewNest(
 	12, --Amount of threads in the pool
 	"Parallel" --Queue, Parallel
 ) 
 
-local Modules: Nest.ModuleSetupDef = {
+local Modules: Quail.ModuleSetupDef = {
 	Nest = NewNest,
 	Modules = {
 		["Test"] = "./testmodules/test" --path relative from main /src/
 	}
 }
 
-Nest:AddModule(Modules)
-Nest.Timer = 1/240
+Quail:AddModule(Modules)
+Quail.Timer = 1/240
 
-local Data: Nest.Parallel = {
+local Data: Quail.Parallel = {
 	[1] = {T = 10},
 	[2] = {T = 10},
 	[3] = {T = 10},
@@ -52,16 +52,12 @@ local Data: Nest.Parallel = {
 	[11] = {T = 10},
 	[12] = {T = 10}
 }
-
--- local Data: Nest.Queue = {
--- 	T = 1
--- }
-
+--Initialize a bevy, which works as a shared table with the Queue backend
 local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
 
-local Def: Nest.EggDef<Nest.Queue> = {
+local Def: Quail.ThreadDef<Quail.Queue> = {
 	ModuleName = "Test",
 	--Name of initialized module in nest, so the packet knows where to go
 
@@ -73,7 +69,7 @@ local Def: Nest.EggDef<Nest.Queue> = {
 	--The module will be passed this as an arg, so put whatever you want into here
 }
 
-local Quail = NewNest:AssignJob(Def)
+local ThreadHandle = NewNest:AssignJob(Def)
 --Returns a handle that you can use to manipulate the packet with
 
 --[==[
@@ -83,13 +79,9 @@ local Quail = NewNest:AssignJob(Def)
 ]==]--
 
 --PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
-NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
-	Quail.Handle.Data.T = ReturnData.T
-	print(Quail.Handle.Data.T)
-end)
-
-NewNest:OnComplete(Quail.Handle, function(ReturnData, ThreadContext)
-	print("AAAA")
+NewNest:OnComplete(ThreadHandle.Handle, function(ReturnData, ThreadContext)
+	ThreadHandle.Handle.Data.T = ReturnData.T
+	print(ReturnData.T)
 end)
 ```
 

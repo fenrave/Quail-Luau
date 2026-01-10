@@ -5,13 +5,12 @@ local InitModule = require("./Initializers")
 local Initializers = InitModule.Initializers
 local Passer = InitModule.PassList 
 ----------------------------------------------------
-local Egg = zune.thread
 local Task = zune.task
 local RGEN: Random = zune.random.new()
-local Nest = {} :: q.Nest ; Passer(Nest)
+local Nest = {} :: q.Quail ; Passer(Nest)
 ----------------------------------------------------
 export type ModuleSetupDef = q.ModuleSetupDef
-export type EggDef<Def> = q.EggDef<Def>
+export type ThreadDef<Def> = q.ThreadDef<Def>
 export type Dict = q.Dict
 ----------------------------------------------------
 --[==[
@@ -44,7 +43,7 @@ export type Parallel = q.Parallel
 ----------------------------------------------------
 type TypedList<K, V> = q.TypedList<K, V>
 type DataPacket = q.DataPacket
-type EggPacket<Def> = q.EggPacket<Def>
+type ThreadPacket<Def> = q.ThreadPacket<Def>
 ----------------------------------------------------
 local NumberCache: TypedList<number, number> = {}
 ----------------------------------------------------
@@ -73,8 +72,8 @@ function QuailHandle:Enable()
 	self.Handle.State = 0
 end
 ----------------------------------------------------
-local InternalList: q.EggList = {}
-Nest.EggList = setmetatable({}, {
+local InternalList: q.NestList = {}
+Nest.NestList = setmetatable({}, {
 		__index = InternalList,
 		__newindex = InternalList
 	}
@@ -83,12 +82,14 @@ Nest.EggList = setmetatable({}, {
 Nest.RoutineList = {}
 Nest.Timer = 1/240
 Nest.NoInternalSchedule = false
+Nest.ThreadLimit = 32
 ----------------------------------------------------
 function Nest:ToggleScheduler()
 	Nest.NoInternalSchedule = not Nest.NoInternalSchedule --Inverts state
 end
 
 function Nest:Scheduler(): ()
+	Initializers.Setup(Nest.ThreadLimit)
 	while not Nest.NoInternalSchedule do
 		for _, Routine in self.RoutineList do
 			Routine()
@@ -101,12 +102,12 @@ function Nest:Scheduler(): ()
 	end
 end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
-function Nest:NewNest(EggAmount: number, SchedType: string?)
+function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 	if SchedType == nil then
 		SchedType = "Queue"
 	end; assert(SchedType ~= nil)
 
-	EggAmount = math.clamp(EggAmount, 1, #Initializers.ThreadCache)
+	ThreadAmount = math.clamp(ThreadAmount, 1, #Initializers.ThreadCache)
 
 	local NewList = {
 		Egg = nil :: any,
@@ -120,7 +121,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 	
 	NewList.InternalScheduler = Schedulers[SchedType]
 
-	NewList.Nest = Initializers["Default"](Initializers, NewList, EggAmount, NewList.NestID)
+	NewList.Nest = Initializers["Default"](Initializers, NewList, ThreadAmount, NewList.NestID)
 	NewList.Egg = NewList.Nest[1]
 
 	NewList.BevyUpdate = {
@@ -174,8 +175,8 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 		List[Handle.ID][GenID()] = fn
 	end
 
-	function NewList:AssignJob(EggDef: q.EggDef<DataPacket>): q.QuailHandle
-		local NewPacket: q.EggPacket<DataPacket> = {
+	function NewList:AssignJob(EggDef: ThreadDef<DataPacket>): q.QuailHandle
+		local NewPacket: q.ThreadPacket<DataPacket> = {
 			Name = EggDef.ModuleName,
 			ID = GenID(),
 			NestID = NewList.NestID,
@@ -191,7 +192,7 @@ function Nest:NewNest(EggAmount: number, SchedType: string?)
 			error("Module wasn't loaded, or failed to load before assignment.")
 		end
 
-		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: EggPacket<any>
+		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: ThreadPacket<any>
 
 		local NewHandle = table.clone(QuailHandle) ; NewHandle.Handle = NewPacket
 
@@ -210,7 +211,7 @@ function Nest:AddModule(pEgg: ModuleSetupDef): ()
 	for i, Egg in Nest do
 		for Name, ModulePath in pEgg.Modules do
 
-			local NewPacket: q.EggPacket<q.ModulePacket> = {
+			local NewPacket: q.ThreadPacket<q.ModulePacket> = {
 				Name = Name,
 				ID = GenID(),
 				NestID = CurrentNest.NestID,

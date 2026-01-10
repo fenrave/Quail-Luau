@@ -11,7 +11,7 @@ local function ParallelTest()
 	local pmodules: Nest.ModuleSetupDef = {
 		Nest = parallel,
 		Modules = {
-			["Test"] = "./testmodules/test"
+			["Test"] = "../tests/testmodules/test"
 		}
 	}; Nest:AddModule(pmodules)
 
@@ -30,7 +30,7 @@ local function ParallelTest()
 		{T = 20}
 	}
 
-	local parallel_def: Nest.EggDef<typeof(workdef_parallel)> = {
+	local parallel_def: Nest.ThreadDef<typeof(workdef_parallel)> = {
 		ModuleName = "Test",
 		Limit = -1,
 		Data = workdef_parallel

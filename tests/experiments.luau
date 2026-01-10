@@ -6,14 +6,12 @@ local out = zune.io.stdout
 local NewNest = Nest:NewNest(
 	12, --Amount of threads in the pool
 	"Parallel"
-) 
-
--- local t = require("./testmodules/test")
+)
 
 local Modules: Nest.ModuleSetupDef = {
 	Nest = NewNest,
 	Modules = {
-		["Test"] = "./testmodules/test"
+		["Test"] = "../tests/testmodules/test"
 	}
 }
 
@@ -58,7 +56,7 @@ local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
 
-local Def1: Nest.EggDef<Nest.Parallel> = {
+local Def1: Nest.ThreadDef<Nest.Parallel> = {
 	ModuleName = "Test",
 	--Name of initialized module in nest, so the packet knows where to go
 
