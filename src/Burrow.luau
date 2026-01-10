@@ -50,7 +50,7 @@ function Field.Get(Name, Meta)
 	return Bevy :: q.Dict
 end
 
-function Field:SyncBevy(Packet: q.ThreadPacket<Bevy>)
+function Field:SyncBevy(Packet: q.ThreadPacket<Bevy>)	
 	for Index,Value in Packet.Data do
 		if not BevyList.Flock[ThreadContext] then
 			BevyList.Flock[ThreadContext] = {}
@@ -89,6 +89,7 @@ local PacketCase: q.TypedList<string, (Packet: q.ThreadPacket<any>) -> ()> = {
 	end,
 
 	SYNC = function(Packet: q.ThreadPacket<any>)
+		ThreadContext = Packet.ThreadContext :: number
 		if DoFlush then
 			Covy:flush()
 		end; Field:SyncBevy(Packet)

@@ -10,7 +10,8 @@ function SchedulerList:Queue(NewList: q.BurrowType, NestID: number): ()
 	local Egg: Thread = NewList:NextEgg()
 	local CurrentEgg: number = NewList.CurrentEgg
 	local CheckedList: q.TypedList<number, boolean> = {}
-
+	local TID = tonumber(tostring(NestID..CurrentEgg))
+	NewList.BevyUpdate.ThreadContext = TID
 	NewList.BevyUpdate.Data = NewList.BevyList ; Egg:send(NewList.BevyUpdate)
 
 	for _, Module in NewList.Clutch do
@@ -20,7 +21,7 @@ function SchedulerList:Queue(NewList: q.BurrowType, NestID: number): ()
 				continue
 			elseif Job.State == 1 then
 				continue
-			end; Job.ThreadContext = tonumber(tostring(NestID..CurrentEgg))
+			end; Job.ThreadContext = TID
 			Job.NestID = NestID
 
 			if not CheckedList[Job.ID] then
@@ -36,7 +37,7 @@ end
 
 function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()
 	local CheckedList: q.TypedList<number, boolean> = {}
-	local SubCache: q.TypedList<number, q.EggPacket<q.Parallel>> = {}
+	local SubCache: q.TypedList<number, q.ThreadPacket<q.Parallel>> = {}
 
 	for Current, Egg: Thread in NewList.Nest do
 		for _, Module in NewList.Clutch do
