@@ -95,7 +95,7 @@ Initializers.ReceiveQueue = {}
 Initializers.Queue = Queue
 ----------------------------------------------------
 local function SetupThreads(Number: number)
-	for i = 1, 32 do
+	for i = 1, Number or 32 do
 		local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
 		table.insert(Initializers.ThreadCache, NewEgg)
 	end
