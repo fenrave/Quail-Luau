@@ -227,7 +227,6 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 			State = 0,
 			ThreadContext = 0
 		}
-		NewPacket.RequestType = string.upper(NewPacket.RequestType)
 
 		if not NewList.Clutch[ThreadDef.ModuleName] then
 			error("Module wasn't loaded, or failed to load before assignment.")

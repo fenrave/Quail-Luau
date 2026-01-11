@@ -47,8 +47,7 @@ function Initializers.Receiver(SelfIndex: number, thread: thread, Thread: Thread
 		Yielding = false
 	}
 	while true do coroutine.yield()
-		repeat
-			ThreadTables[thread].Yielding = true
+		repeat ThreadTables[thread].Yielding = true
 			local Received: q.ThreadPacket<q.CompletedPacket> = Thread:receive()
 			
 			table.remove(Initializers.ReceiveQueue[SelfIndex])
@@ -58,8 +57,8 @@ function Initializers.Receiver(SelfIndex: number, thread: thread, Thread: Thread
 				Nest.NestList[Received.NestID],
 				Received,
 				SelfIndex
-			)
-			ThreadTables[thread].Yielding = false
+			); ThreadTables[thread].Yielding = false
+
 		until #Initializers.ReceiveQueue == 0
 	end
 end
@@ -90,8 +89,8 @@ Initializers.Queue = Queue
 local function SetupThreads(Number: number)
 	Initializers.ReceiveQueue = table.create(Number or 32, table.clone({}))
 	for i = 1, Number or 32 do
-		local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
-		table.insert(Initializers.ThreadCache, NewEgg)
+		local NewThread = Egg.fromModule("./Burrow") ; NewThread:start()
+		table.insert(Initializers.ThreadCache, NewThread)
 	end
 
 	for i = 1, #Initializers.ThreadCache do

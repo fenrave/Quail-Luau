@@ -9,7 +9,7 @@ local function MultiPoolTest()
 	)
 
 	local parallel = Nest:NewNest(
-		3,
+		12,
 		"Parallel"
 	)
 
