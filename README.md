@@ -24,18 +24,14 @@ Long term goals are to implement differing kinds of ThreadPool back-ends & to im
 local Quail = require("@Quail")
 ----------------------------------------
 local NewNest = Quail:NewNest(
-	12, --Amount of threads in the pool
+	32, --Amount of threads in the pool
 	"Parallel" --Queue, Parallel
 ) 
 
-local Modules: Quail.ModuleSetupDef = {
-	Nest = NewNest,
-	Modules = {
-		["Test"] = "./testmodules/test" --path relative from main /src/
-	}
-}
+NewNest:AddModule({
+	["Test"] = "../tests/testmodules/test"
+})
 
-Quail:AddModule(Modules)
 Quail.Timer = 1/240
 
 local Data: Quail.Parallel = {

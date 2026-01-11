@@ -59,10 +59,7 @@ export type ThreadInterface = {
 	Covy: BufferSink
 }
 
-export type ModuleSetupDef = {
-	Nest: BurrowType,
-	Modules: TypedList<string, string>
-}
+export type ModuleSetupDef = TypedList<string, string>
 
 export type SchedulerType = (
 	self: SchedulerList,
@@ -102,13 +99,14 @@ export type FieldTypes = {
 }
 
 export type BurrowType = {
-	Egg: Thread,
+	Thread: Thread,
 	Nest: TypedList<number, Thread>,
-	CurrentEgg: number,
+	CurrentThread: number,
 	BevyList: Field,
 	InternalScheduler: SchedulerType,
 	NestID: number,
 	SchedType: string,
+	AddModule: (self: BurrowType, SetupDef: ModuleSetupDef) -> (),
 
 	BevyUpdate: ThreadPacket<Field>,
 	BevyRequest: ThreadPacket<nil>,
@@ -124,8 +122,9 @@ export type BurrowType = {
 		fn: <Type>(...Type) -> ()
 	) -> (),
 
-	InitBevy: (self: BurrowType) -> Dict,
-	NextEgg: (self: BurrowType) -> Thread,
+	InitBevy: (self: BurrowType, Name: string) -> Dict,
+	SyncBevies: (self: BurrowType) -> (),
+	NextThread: (self: BurrowType) -> Thread,
 
 	Clutch: ClutchInterface
 }
@@ -134,6 +133,7 @@ export type QuailHandle = {
 	Remove: (self: QuailHandle) -> (),
 	Disable: (self: QuailHandle) -> (),
 	Enable: (self: QuailHandle) -> (),
+	OnComplete: (self: QuailHandle, fn: (...any) -> ()) -> (),
 
 	Handle: ThreadPacket<any>
 }
@@ -145,9 +145,6 @@ export type Quail = {
 		SchedType: string?,
 		CanAsync: boolean?
 	) -> BurrowType,
-
-	AddModule: (self: Quail, pEgg: ModuleSetupDef) -> (),
-	RemoveModule: (self: Quail, Name: string) -> (),
 
 	Scheduler: (self: Quail) -> (),
 	RoutineList: TypedList<number, () -> ()>,

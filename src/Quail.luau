@@ -57,6 +57,18 @@ local function GenID(): number
 	return Number
 end
 ----------------------------------------------------
+local InternalList: q.NestList = {}
+Nest.NestList = setmetatable({}, {
+		__index = InternalList,
+		__newindex = InternalList
+	}
+)
+
+Nest.RoutineList = {}
+Nest.Timer = 1/240
+Nest.NoInternalSchedule = false
+Nest.ThreadLimit = 32
+----------------------------------------------------
 local QuailHandle = {} :: q.QuailHandle
 
 function QuailHandle:Remove()
@@ -71,18 +83,12 @@ end
 function QuailHandle:Enable()
 	self.Handle.State = 0
 end
-----------------------------------------------------
-local InternalList: q.NestList = {}
-Nest.NestList = setmetatable({}, {
-		__index = InternalList,
-		__newindex = InternalList
-	}
-)
 
-Nest.RoutineList = {}
-Nest.Timer = 1/240
-Nest.NoInternalSchedule = false
-Nest.ThreadLimit = 32
+function QuailHandle:OnComplete(fn: (...any) -> ())
+	local Handle = self.Handle
+
+	Nest.NestList[Handle.NestID]:OnComplete(Handle, fn)
+end
 ----------------------------------------------------
 function Nest:ToggleScheduler()
 	Nest.NoInternalSchedule = not Nest.NoInternalSchedule --Inverts state
@@ -114,7 +120,7 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 		Nest = {} :: any,
 		Clutch = {},
 		BevyList = {},
-		CurrentEgg = 1,
+		CurrentThread = 1,
 		NestID = GenID(),
 		SchedType = SchedType
 	} :: q.BurrowType
@@ -122,7 +128,7 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 	NewList.InternalScheduler = Schedulers[SchedType]
 
 	NewList.Nest = Initializers["Default"](Initializers, NewList, ThreadAmount, NewList.NestID)
-	NewList.Egg = NewList.Nest[1]
+	NewList.Thread = NewList.Nest[1]
 
 	NewList.BevyUpdate = {
 		Data = NewList.BevyList,
@@ -153,16 +159,51 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 		return self.BevyList[Name]
 	end
 
-	function NewList:NextEgg(): Thread
-		local NextIndex: number = self.CurrentEgg + 1
-		local NextEgg: Thread = self.Nest[NextIndex]
+	function NewList:SyncBevies()
+		self.BevyUpdate.Data = self.BevyList
+		for Index, Thread in self.Nest do
+			local TID = tonumber(tostring(self.NestID..Index))
+			self.BevyUpdate.ThreadContext = TID :: number
+			Thread:send(self.BevyUpdate)
+		end
+	end
 
-		if not NextEgg then
-			NextEgg = self.Nest[1]
+	function NewList:AddModule(Def)
+		for i, Egg in self.Nest do
+			for Name, ModulePath in Def do
+				local NewPacket: q.ThreadPacket<q.ModulePacket> = {
+					Name = Name,
+					ID = GenID(),
+					NestID = self.NestID,
+					RequestType = string.upper(q.RequestEnum[1]),
+					RequestAmount = 0 :: number,
+					Data = {
+						Path = ModulePath
+					},
+					State = 0
+				}
+
+				self.Clutch[Name] = {
+					Jobs = {},
+					Callbacks = {}
+				}
+
+				Egg:send(NewPacket)
+			end
+		end
+
+	end
+
+	function NewList:NextThread(): Thread
+		local NextIndex: number = self.CurrentThread + 1
+		local NextThread: Thread = self.Nest[NextIndex]
+
+		if not NextThread then
+			NextThread = self.Nest[1]
 			NextIndex = 1
-		end; self.CurrentEgg = NextIndex
+		end; self.CurrentThread = NextIndex
 
-		self.Egg = NextEgg ; return NextEgg
+		self.Thread = NextThread ; return NextThread
 	end
 
 	function NewList:OnComplete(Handle, fn: <Type>(...Type) -> ()): ()
@@ -175,24 +216,24 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 		List[Handle.ID][GenID()] = fn
 	end
 
-	function NewList:AssignJob(EggDef: ThreadDef<DataPacket>): q.QuailHandle
+	function NewList:AssignJob(ThreadDef: ThreadDef<DataPacket>): q.QuailHandle
 		local NewPacket: q.ThreadPacket<DataPacket> = {
-			Name = EggDef.ModuleName,
+			Name = ThreadDef.ModuleName,
 			ID = GenID(),
 			NestID = NewList.NestID,
 			RequestType = q.RequestEnum[2],
-			RequestAmount = EggDef.Limit or -1,
-			Data = EggDef.Data,
+			RequestAmount = ThreadDef.Limit or -1,
+			Data = ThreadDef.Data,
 			State = 0,
 			ThreadContext = 0
 		}
 		NewPacket.RequestType = string.upper(NewPacket.RequestType)
 
-		if not NewList.Clutch[EggDef.ModuleName] then
+		if not NewList.Clutch[ThreadDef.ModuleName] then
 			error("Module wasn't loaded, or failed to load before assignment.")
 		end
 
-		NewList.Clutch[EggDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: ThreadPacket<any>
+		NewList.Clutch[ThreadDef.ModuleName].Jobs[NewPacket.ID] = NewPacket :: ThreadPacket<any>
 
 		local NewHandle = table.clone(QuailHandle) ; NewHandle.Handle = NewPacket
 
@@ -204,45 +245,5 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 	return NewList
 end
 
-function Nest:AddModule(pEgg: ModuleSetupDef): ()
-	local CurrentNest = pEgg.Nest
-	local Nest = CurrentNest.Nest
-
-	for i, Egg in Nest do
-		for Name, ModulePath in pEgg.Modules do
-
-			local NewPacket: q.ThreadPacket<q.ModulePacket> = {
-				Name = Name,
-				ID = GenID(),
-				NestID = CurrentNest.NestID,
-				RequestType = string.upper(q.RequestEnum[1]),
-				RequestAmount = 0 :: number,
-				Data = {
-					Path = ModulePath
-				},
-				State = 0
-			}
-
-			CurrentNest.Clutch[Name] = {
-				Jobs = {},
-				Callbacks = {}
-			}
-
-			Egg:send(NewPacket)
-		end
-
-	end
-
-end
-
-function Nest:RemoveModule(pEgg: ModuleSetupDef)
-	local CurrentNest = pEgg.Nest
-
-	for i, Egg in CurrentNest.Nest do
-		for Name in pEgg.Modules do
-			CurrentNest.Clutch[Name] = nil
-		end
-	end
-end
 
 return Nest

@@ -6,14 +6,10 @@ local NewNest = Quail:NewNest(
 	"Parallel" --Queue, Parallel
 ) 
 
-local Modules: Quail.ModuleSetupDef = {
-	Nest = NewNest,
-	Modules = {
-		["Test"] = "./testmodules/test" --path relative from main /src/
-	}
-}
+NewNest:AddModule({
+	["Test"] = "../tests/testmodules/test"
+})
 
-Quail:AddModule(Modules)
 Quail.Timer = 1/240
 
 local Data: Quail.Parallel = {

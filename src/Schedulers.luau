@@ -7,12 +7,10 @@ local Task = zune.task
 local SchedulerList = {} :: q.SchedulerList
 ----------------------------------------------------
 function SchedulerList:Queue(NewList: q.BurrowType, NestID: number): ()
-	local Egg: Thread = NewList:NextEgg()
-	local CurrentEgg: number = NewList.CurrentEgg
+	local Thread: Thread = NewList:NextThread()
 	local CheckedList: q.TypedList<number, boolean> = {}
-	local TID = tonumber(tostring(NestID..CurrentEgg))
+	local TID = tonumber(tostring(NestID..NewList.CurrentThread))
 	NewList.BevyUpdate.ThreadContext = TID
-	NewList.BevyUpdate.Data = NewList.BevyList ; Egg:send(NewList.BevyUpdate)
 
 	for _, Module in NewList.Clutch do
 		for Index, Job in Module.Jobs do
@@ -28,11 +26,9 @@ function SchedulerList:Queue(NewList: q.BurrowType, NestID: number): ()
 				Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
 			end
 
-			Egg:send(Job) ; table.insert(Init.ReceiveQueue, Egg)
+			Thread:send(Job) ; table.insert(Init.ReceiveQueue, Thread)
 		end
 	end
-
-	Egg:send(NewList.BevyRequest) ; table.insert(Init.ReceiveQueue, Egg)
 end
 
 function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()

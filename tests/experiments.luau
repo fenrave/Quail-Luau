@@ -8,14 +8,10 @@ local NewNest = Nest:NewNest(
 	"Parallel"
 )
 
-local Modules: Nest.ModuleSetupDef = {
-	Nest = NewNest,
-	Modules = {
-		["Test"] = "../tests/testmodules/test"
-	}
-}
+NewNest:AddModule({
+	["Test"] = "../tests/testmodules/test"
+})
 
-Nest:AddModule(Modules)
 Nest.Timer = 1/800
 
 local Data1: Nest.Parallel = {

@@ -7,12 +7,9 @@ local function QueueTest()
 		"Queue"
 	)
 
-	local qmodule: Nest.ModuleSetupDef = {
-		Nest = queue,
-		Modules = {
-			["Test"] = "../tests/testmodules/test"
-		}
-	}; Nest:AddModule(qmodule)
+	queue:AddModule({
+		["Test"] = "../tests/testmodules/test"
+	})
 
 	local workdef_queue: Nest.Queue = {
 		T = 50

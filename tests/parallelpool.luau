@@ -8,12 +8,9 @@ local function ParallelTest()
 		"Parallel"
 	)
 
-	local pmodules: Nest.ModuleSetupDef = {
-		Nest = parallel,
-		Modules = {
-			["Test"] = "../tests/testmodules/test"
-		}
-	}; Nest:AddModule(pmodules)
+	parallel:AddModule({
+		["Test"] = "../tests/testmodules/test"
+	})
 
 	local workdef_parallel: Nest.Parallel = {
 		{T = 20},
