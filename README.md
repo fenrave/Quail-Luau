@@ -48,10 +48,12 @@ local Data: Quail.Parallel = {
 	[11] = {T = 10},
 	[12] = {T = 10}
 }
---Initialize a bevy, which works as a shared table with the Queue backend
+--Initialize a bevy, which works as a static shared table for the threadqueue to read from
 local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
+--Sets data on the spawned threads
+NewNest:SyncBevies()
 
 local Def: Quail.ThreadDef<Quail.Parallel> = {
 	ModuleName = "Test",
