@@ -104,7 +104,7 @@ type Data = {
 local function Test(Data: Data, Interface: QuailTypes.ThreadInterface, Context: number): Data
     local NewBevy = Interface.Bevy.Get("Test")
 
-    NewBevy["Hello"]  += 1
+    NewBevy["Hello"] += 1
 
     Data.T += 10
     
