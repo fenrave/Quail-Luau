@@ -26,7 +26,7 @@ function SchedulerList:Queue(NewList: q.BurrowType, NestID: number): ()
 				Job.RequestAmount = if Job.RequestAmount >= 0 then Job.RequestAmount - 1 else -1
 			end
 
-			Thread:send(Job) ; table.insert(Init.ReceiveQueue, Thread)
+			Thread:send(Job) ; table.insert(Init.ReceiveQueue[NewList.CurrentThread], Thread)
 		end
 	end
 end
@@ -35,7 +35,7 @@ function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()
 	local CheckedList: q.TypedList<number, boolean> = {}
 	local SubCache: q.TypedList<number, q.ThreadPacket<q.Parallel>> = {}
 
-	for Current, Egg: Thread in NewList.Nest do
+	for Current, Thread: Thread in NewList.Nest do
 		for _, Module in NewList.Clutch do
 			for Index, Job in Module.Jobs do
 				if Job.State == 2 then
@@ -60,8 +60,8 @@ function SchedulerList:Parallel(NewList: q.BurrowType, NestID: number): ()
 				Init.PseudoPacket.NestID = NestID
 				Init.PseudoPacket.Name = Job.Name
 				
-				Egg:send(Init.PseudoPacket)
-				table.insert(Init.ReceiveQueue, Egg)
+				Thread:send(Init.PseudoPacket)
+				table.insert(Init.ReceiveQueue[NewList.CurrentThread], Thread)
 			end
 		end
 	end

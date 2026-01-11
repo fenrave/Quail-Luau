@@ -51,13 +51,7 @@ function Initializers.Receiver(SelfIndex: number, thread: thread, Thread: Thread
 			ThreadTables[thread].Yielding = true
 			local Received: q.ThreadPacket<q.CompletedPacket> = Thread:receive()
 			
-			table.remove(
-				Initializers.ReceiveQueue,
-				table.find(
-					Initializers.ReceiveQueue,
-					Thread
-				)
-			)
+			table.remove(Initializers.ReceiveQueue[SelfIndex])
 
 			Initializers.CoroutineCase(
 				Received.RequestType,
@@ -91,10 +85,10 @@ Initializers.PseudoPacket = {
 }
 ----------------------------------------------------
 Initializers.ThreadCache = {}
-Initializers.ReceiveQueue = {}
 Initializers.Queue = Queue
 ----------------------------------------------------
 local function SetupThreads(Number: number)
+	Initializers.ReceiveQueue = table.create(Number or 32, table.clone({}))
 	for i = 1, Number or 32 do
 		local NewEgg = Egg.fromModule("./Burrow") ; NewEgg:start()
 		table.insert(Initializers.ThreadCache, NewEgg)

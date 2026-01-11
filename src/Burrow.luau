@@ -103,7 +103,7 @@ local PacketCase: q.TypedList<string, (Packet: q.ThreadPacket<any>) -> ()> = {
 local function SendQueueHandler(): ()
 	while true do coroutine.yield()
 		repeat
-			local Packet = ReceivedQueue[1] ; table.remove(ReceivedQueue, 1)
+			local Packet = table.remove(ReceivedQueue) :: q.ThreadPacket<any>
 			PacketCase[Packet.RequestType](Packet)
 		until #ReceivedQueue == 0
 	end

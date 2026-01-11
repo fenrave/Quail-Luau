@@ -162,7 +162,7 @@ export type Initializers = {
 	ThreadCache: TypedList<number, Thread>,
 	Receiver: (Thread: Thread) -> (),
 	PseudoPacket: ThreadPacket<Parallel>,
-	ReceiveQueue: {Thread},
+	ReceiveQueue: {[number]: {Thread}},
 	Queue: () -> (),
 	CoroutineCase: Case,
 	QueueCase: Case,
