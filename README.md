@@ -24,7 +24,7 @@ Long term goals are to implement differing kinds of ThreadPool back-ends & to im
 local Quail = require("@Quail")
 ----------------------------------------
 local NewNest = Quail:NewNest(
-	32, --Amount of threads in the pool
+	12, --Amount of threads in the pool
 	"Parallel" --Queue, Parallel
 ) 
 
@@ -53,7 +53,7 @@ local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
 
-local Def: Quail.ThreadDef<Quail.Queue> = {
+local Def: Quail.ThreadDef<Quail.Parallel> = {
 	ModuleName = "Test",
 	--Name of initialized module in nest, so the packet knows where to go
 
