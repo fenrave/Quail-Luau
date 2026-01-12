@@ -15,6 +15,7 @@ end
 local BevyList: {Flock: {q.Field}} = {Flock = {}}
 ----------------------------------------------------
 local Field = {} :: q.FieldTypes
+type localDict = {[any]: any}
 local ThreadContext: number = 0
 ----------------------------------------------------
 function Field.Get(Name, Meta)
@@ -23,7 +24,7 @@ function Field.Get(Name, Meta)
 	end
 
 	if not BevyList.Flock[ThreadContext][Name] then
-		BevyList.Flock[ThreadContext][Name] = {}
+		BevyList.Flock[ThreadContext][Name] = {} :: any
 	end
 	
 	local Flock = BevyList.Flock[ThreadContext][Name]
@@ -57,7 +58,7 @@ function Field:SyncBevy(Packet: q.ThreadPacket<Bevy>)
 		end
 
 		if not BevyList.Flock[ThreadContext][Index] then
-			BevyList.Flock[ThreadContext][Index] = {}
+			BevyList.Flock[ThreadContext][Index] = {} :: any
 		end; BevyList.Flock[ThreadContext][Index] = Value
 	end
 end

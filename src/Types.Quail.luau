@@ -33,11 +33,18 @@ export type TypedList<K,V> = {
 	[K]: V
 }
 
-export type Dict = TypedList<any, any>
+export type Dict = {
+	[any]: any,
+	Sync: (self: Dict) -> ()
+}
+
 export type ModuleTable<Module> = TypedList<string, TypedList<number, Module>>
-export type Field = TypedList<string, Dict>
+export type Field = {
+	[string]: Dict
+}
+
 export type Queue = TypedList<any, any>
-export type Parallel = TypedList<number, Dict>
+export type Parallel = TypedList<number, TypedList<any, any>>
 
 export type Schedulers = {
 	Queue: Queue,
@@ -108,8 +115,8 @@ export type BurrowType = {
 	SchedType: string,
 	AddModule: (self: BurrowType, SetupDef: ModuleSetupDef) -> (),
 
-	BevyUpdate: ThreadPacket<Field>,
-	BevyRequest: ThreadPacket<nil>,
+	BevyUpdate: ThreadPacket<any>,
+	BevyRequest: ThreadPacket<any>,
 
 	AssignJob: (
 		self: BurrowType,

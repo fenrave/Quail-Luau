@@ -31,7 +31,9 @@ local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
 
-local Def: Quail.ThreadDef<Quail.Queue> = {
+Bevy:Sync()
+
+local Def: Quail.ThreadDef<Quail.Parallel> = {
 	ModuleName = "Test",
 	--Name of initialized module in nest, so the packet knows where to go
 

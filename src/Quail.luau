@@ -12,6 +12,8 @@ local Nest = {} :: q.Quail ; Passer(Nest)
 export type ModuleSetupDef = q.ModuleSetupDef
 export type ThreadDef<Def> = q.ThreadDef<Def>
 export type Dict = q.Dict
+export type Field = q.Field
+export type BurrowType = q.BurrowType
 ----------------------------------------------------
 --[==[
 @Queue Data in the `Data` Field is sent to each Thread sequentially & in an ordered manner.
@@ -108,6 +110,13 @@ function Nest:Scheduler(): ()
 	end
 end; Task.spawn(Nest.Scheduler, Nest)
 ----------------------------------------------------
+local function BevySync(self: Dict | BurrowType, Burrow: q.BurrowType, ToSync)
+	for Index, Thread in Burrow.Nest do
+		Burrow.BevyUpdate.ThreadContext = tonumber(tostring(Burrow.NestID..Index))
+		Thread:send(ToSync)
+	end
+end
+
 function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 	if SchedType == nil then
 		SchedType = "Queue"
@@ -151,21 +160,31 @@ function Nest:NewNest(ThreadAmount: number, SchedType: string?)
 		NewList.InternalScheduler(Schedulers, NewList, NewList.NestID)
 	end; table.insert(self.RoutineList, Internal)
 
-	function NewList:InitBevy(Name: string)
+	function NewList:InitBevy(Name: string): Dict
 		if not self.BevyList[Name] then
-			self.BevyList[Name] = {}
+			self.BevyList[Name] = {
+				Sync = function(self: Dict)
+					NewList.BevyUpdate.Data = {[Name] = table.clone(self)} :: Field
+					NewList.BevyUpdate.Data[Name].Sync = nil
+					BevySync(self, NewList, NewList.BevyUpdate)
+				end
+			}
 		end
 
 		return self.BevyList[Name]
 	end
 
 	function NewList:SyncBevies()
-		self.BevyUpdate.Data = self.BevyList
-		for Index, Thread in self.Nest do
-			local TID = tonumber(tostring(self.NestID..Index))
-			self.BevyUpdate.ThreadContext = TID :: number
-			Thread:send(self.BevyUpdate)
+		local ToSyncList: Field = {}
+
+		for Name, Bevy: Dict in self.BevyList do
+			ToSyncList[Name] = table.clone(Bevy)
+			ToSyncList[Name].Sync = nil :: any
 		end
+
+		self.BevyUpdate.Data = ToSyncList
+
+		BevySync(self, self, self.BevyUpdate)
 	end
 
 	function NewList:AddModule(Def)
