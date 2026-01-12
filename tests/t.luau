@@ -54,12 +54,12 @@ local ThreadHandle = NewNest:AssignJob(Def)
 	@Quail:Enable() sets the packet State to 0, enabling callbacks
 ]==]--
 
---PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
-NewNest:OnComplete(ThreadHandle.Handle, function(ReturnData, ThreadContext)
+--Callback: (Data) -> ()
+ThreadHandle:OnComplete(function(ReturnData, ThreadContext)
 	ThreadHandle.Handle.Data.T = ReturnData.T
 	print(ReturnData.T)
 end)
-
+--Alternatively
 NewNest:OnComplete(ThreadHandle.Handle, function(ReturnData, ThreadContext)
-	print("AAAA")
+	print(ThreadContext)
 end)

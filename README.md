@@ -24,7 +24,7 @@ Long term goals are to implement differing kinds of ThreadPool back-ends & to im
 local Quail = require("@Quail")
 ----------------------------------------
 local NewNest = Quail:NewNest(
-	12, --Amount of threads in the pool
+	32, --Amount of threads in the pool
 	"Parallel" --Queue, Parallel
 ) 
 
@@ -48,12 +48,12 @@ local Data: Quail.Parallel = {
 	[11] = {T = 10},
 	[12] = {T = 10}
 }
---Initialize a bevy, which works as a static shared table for the threadqueue to read from
+--Initialize a bevy, which works as a shared table with the Queue backend
 local Bevy = NewNest:InitBevy("Test")
 
 Bevy["Hello"] = 1
---Sets data on the spawned threads
-NewNest:SyncBevies()
+
+Bevy:Sync()
 
 local Def: Quail.ThreadDef<Quail.Parallel> = {
 	ModuleName = "Test",
@@ -76,10 +76,14 @@ local ThreadHandle = NewNest:AssignJob(Def)
 	@Quail:Enable() sets the packet State to 0, enabling callbacks
 ]==]--
 
---PacketDef (You can use the returned handle to retrieve this), Callback: (Data) -> ()
-NewNest:OnComplete(ThreadHandle.Handle, function(ReturnData, ThreadContext)
+--Callback: (Data) -> ()
+ThreadHandle:OnComplete(function(ReturnData, ThreadContext)
 	ThreadHandle.Handle.Data.T = ReturnData.T
 	print(ReturnData.T)
+end)
+--Alternatively
+NewNest:OnComplete(ThreadHandle.Handle, function(ReturnData, ThreadContext)
+	print(ThreadContext)
 end)
 ```
 
