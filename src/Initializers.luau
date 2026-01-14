@@ -17,6 +17,10 @@ Initializers.CoroutineCase = Case(
 	"ReceiverFunctions",
 	{
 		SEND = function(List: q.BurrowType, Received: ThreadPacket<any>, ThreadContext)
+			if not List.Clutch[Received.Name].Callbacks[Received.ID] then
+				return
+			end
+
 			for _, Callback in List.Clutch[Received.Name].Callbacks[Received.ID] do
 				Callback(Received.Data, ThreadContext)
 			end
