@@ -40,7 +40,8 @@ local function NewCase(Name: string, Options: InternalCase): Case
                 for Index,Key in pairs(toMerge) do
                     mergeTo[Index] = Key
                 end
-                return (mergeTo :: any) :: Case
+                
+                return mergeTo
             end
         }
     )
